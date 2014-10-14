@@ -27,11 +27,21 @@ var svgContainer =
       .attr("width", 900)
       .attr("height", 900);
 
+//red, yellow, light-green, green, grey, tan
+var colors = ["rgba(255,0,0,0.4)", "rgba(255,255,0,0.4)", "rgba(0,255,0,0.4)", "rgba(0,102,0,0.4)", "rgba(96,96,96,0.4)", "rgba(255,255,204,0.4)"];
+
+var colorCount = [0, 0, 0, 0, 0];
+
+var numberCount = [0, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 2, 1] // i.e  -    The numbers 0 - 12, in their total numbers on the board
+
 while (rowsLeft > 0) {
     var tmphexRem = hexagonsRemaining;
     var tmpX = xp;
     while (hexagonsRemaining > 0) {
-        xp += 100
+        xp += 100;
+
+        var randomNumber = getRandomColorNumber()
+        //var randomNumber = Math.floor(Math.random()*5);
 
         hexagonData = [
           { "x": radius+xp,   "y": yp}, 
@@ -48,12 +58,12 @@ while (rowsLeft > 0) {
                         .attr("stroke", "red")
                         .attr("stroke-line","20,5")
                         .attr("stroke-width", 3)
-                        .attr("fill", "rgba(255,0,0,0.4)");
+                        .attr("fill", colors[randomNumber]);
         hexagonsRemaining--;
     }
     hexagonsRemaining = tmphexRem + 1;
     xp = tmpX;
-    yp += 90
+    yp += 90;
     rowsLeft--;
     if (rowsLeft == 4) {
         xp -= 50
@@ -66,68 +76,21 @@ while (rowsLeft > 0) {
         xp += 50
         hexagonsRemaining = 3
     }
-
 }
 
+//Do not currently have support for adjacent squares not being of same type.
+function getRandomColorNumber() {
+    //var colorCount = [0, 0, 0, 0, 0];
+    var randomNumber = Math.floor(Math.random()*5);
+    if (colorCount[randomNumber] > 3) {
+        return getRandomColorNumber();
+    } else {
+        colorCount[randomNumber] += 1;
+        return randomNumber;
+    }
+}
 
-//--------------------------------------------------------------------------------------------------------------------------------
+function getRandomTileNumber() {
+    var randomNumber = Math.floor(Math.random()*5);
 
-// var h1 = (Math.sqrt(3)/2),
-//     radius = 100,
-//     xp = 350,
-//     yp = 250,
-//     hexagonData1 = [
-//       { "x": radius+xp,   "y": yp}, 
-//       { "x": radius/2+xp,  "y": radius*h+yp},
-//       { "x": -radius/2+xp,  "y": radius*h+yp},
-//       { "x": -radius+xp,  "y": yp},
-//       { "x": -radius/2+xp,  "y": -radius*h+yp},
-//       { "x": radius/2+xp, "y": -radius*h+yp}
-//     ];
-
-// var enterElements = 
-//     svgContainer.append("path")
-//                 .attr("d", drawHexagon(hexagonData1))
-//                 .attr("stroke", "red")
-//                 .attr("stroke-line","20,5")
-//                 .attr("stroke-width", 3)
-//                 .attr("fill", "rgba(255,0,0,0.4)");
-
-//--------------------------------------------------------------------------------------------------------------------------------
-
-// while (hexagonsRemaining > 0) {
-//  var color = getColor();
-//  var msgContainer = document.createElement('div');
-//      msgContainer.style.position = "absolute";
-//  msgContainer.style.top = fromTop;
-//  msgContainer.style.left = left;
-//  msgContainer.id = 'hex1';             // No setAttribute required
-//  msgContainer.className = 'hexagon-wrapper' // No setAttribute required, note it's "className" to avoid conflict with JavaScript reserved word
-//  document.body.appendChild(msgContainer);
-
-//  var hexagon = document.createElement('div');
-//  hexagon.id= color;
-//  hexagon.className = 'hexagon'
-//  msgContainer.appendChild(hexagon);
-//  hexagonsRemaining -= 1;
-//  fromTop += 50;
-//  left = left + 50;
-// }
-
-// function getColor() {
-//  var colors = ['color1', 'color2', 'color3', 'color4', 'color5'];
-//  var determinant = Math.random();
-//  var colorIndex = 0;
-//  if (determinant < .2) {
-//      colorIndex = 0;
-//  } else if (determinant <.4) {
-//      colorIndex = 1;
-//  } else if (determinant < .6) {
-//      colorIndex = 2;
-//  } else if (determinant < .8) {
-//      colorIndex = 3;
-//  } else {
-//      colorIndex = 4;
-//  }
-//  return colors[colorIndex];
-// }
+}
