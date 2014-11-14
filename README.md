@@ -16,3 +16,5 @@ Don't Require Network Programming:
 6) Place Settlements
 7) Get Longest Road
 8) Development Cards
+
+![alt tag](http://imgur.com/uAHb8No)
