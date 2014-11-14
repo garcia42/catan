@@ -17,4 +17,4 @@ Don't Require Network Programming:
 7) Get Longest Road
 8) Development Cards
 
-![alt tag](http://imgur.com/uAHb8No)
+![alt tag](http://i.imgur.com/uAHb8No.png)
