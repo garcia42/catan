@@ -1,17 +1,43 @@
-function Vertex(x, y, z, xp, yp, h, radius) {
+function Vertex(xp, yp, h, radius, index) {
 
-	this.up = [radius+xp, yp];
-	this.upRight = [radius/2+xp, radius*h+yp];
-	this.upLeft = [-radius/2+xp, radius*h+yp];
-	this.down = [-radius+xp, yp]
-	this.downLeft = [-radius/2+xp, -radius*h+yp];
-	this.downRight = [radius/2+xp, -radius*h+yp];
+	var x = 0;
+	var y = 0;
+	var downShift = 20
+	var upDown = 8;
 
-	this.x = x;
-	this.y = y;
-	this.z = z;
+	var __construct = function(argument) {
 
-	// this.neighborUp;
-	// this.neighborLeft;
-	// this.neighborRight;
+		if (index == 0) { // up
+			x = xp;
+			y = yp - radius - upDown;
+		} else if (index == 1) { // up right
+			x = radius+xp;
+			y = -radius+yp + downShift;
+		} else if (index == 2) { //down right
+			x = radius+xp;
+			y = radius+yp - downShift;
+		} else if (index == 3) { //down
+			x = xp;
+			y = yp + radius + upDown;
+		} else if (index == 4) { // down left
+			x = -radius+xp
+			y = radius+yp - downShift;
+		} else if (index == 5) { // up left
+			x = -radius+xp;
+			y = -radius+yp + downShift;
+		}
+	}()
+
+  	this.getX = function() {
+ 		return x;
+   	};
+
+   	this.getY = function() {
+      return y;
+   	};
+
+    this.isEqual = function(vertex) {
+    	return x === vertex.getX() && y === vertex.getY();
+    }
+
 }

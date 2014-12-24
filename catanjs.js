@@ -1,5 +1,7 @@
 var hexagonsRemaining = 3;
-var rowsLeft = 5
+var rowsLeft = 5;
+var hexagonWidth = 50;
+var rowHeight = 88;
 
 var h = (Math.sqrt(3)/2),
     radius = 50,
@@ -33,6 +35,8 @@ var colors = ["rgba(255,0,0,0.4)", "rgba(255,255,0,0.4)", "rgba(0,255,0,0.4)", "
 var colorCount = [0, 0, 0, 0, 0];
 
 var numberCount = []; // i.e  -    The numbers 0 - 12, in their total numbers on the board
+
+var vertices = []; // going to be added using the centers and calculations.
 
 for (i = 2; i <= 12; i++) {
 	if (i == 7) {
@@ -68,6 +72,8 @@ while (rowsLeft > 0) {
           { "x": radius/2+xp, "y": -radius*h+yp}
         ];
 
+        addVertex(xp, yp, h, radius);
+
         centers.push([xp, yp]);
 
         if (count == noCircle) {
@@ -93,17 +99,17 @@ while (rowsLeft > 0) {
     }
     hexagonsRemaining = tmphexRem + 1;
     xp = tmpX;
-    yp += 90;
+    yp += rowHeight;
     rowsLeft--;
     if (rowsLeft == 4) {
-        xp -= 50
+        xp -= hexagonWidth
     } else if (rowsLeft == 3) {
-        xp -= 50
+        xp -= hexagonWidth
     } else if (rowsLeft == 2) {
-        xp += 50
+        xp += hexagonWidth
         hexagonsRemaining = 4
     } else if (rowsLeft == 1) {
-        xp += 50
+        xp += hexagonWidth
         hexagonsRemaining = 3
     }
 }
@@ -114,25 +120,10 @@ var text = svgContainer.selectAll("text")
                         .enter()
                         .append("text");
 
-//Add SVG Text Element Attributes
-var textLabels = text
-                 .attr("x", function(d) { return d.cx.baseVal.value; })
-                 .attr("y", function(d) { return d.cy.baseVal.value +7; })
-                 .text( function (d) { return getNextNumber(); })
-                 .attr("font-family", "sans-serif")
-                 .attr("font-size", "20px")
-                 .attr("fill", "red")
-                 .style("text-anchor", "middle");
-
-var textFieldsList = svgContainer.selectAll("text")[0];
-for (i = 0; i < textFieldsList.length; i++){
-	var num = svgContainer.selectAll("text")[0][i].innerHTML;
-	if (svgContainer.selectAll("text")[0][i].attributes.fill.value == "red") {
-		if (num != "6" && num != "8") {
-			svgContainer.selectAll("text")[0][i].attributes.fill.value = "black";
-		}
-	}
-}
+addNumbersToCircles();
+changeNumberColors();
+vertexCircles = addVertexCircles();
+addOnClickListenerToVertices(vertexCircles);
 
 //Getting the next number for a square
 function getNextNumber() {
@@ -155,5 +146,74 @@ function getRandomColorNumber() {
 
 function getRandomTileNumber() {
     var randomNumber = Math.floor(Math.random()*5);
+}
 
+function getDiceRoll() {
+    var one = Math.floor(Math.random()*6);
+    var two = Math.floor(Math.random()*6);
+    return [one, two];
+}
+
+function addVertex(xp, yp, h, radius) {
+    for (i = 0; i < 6; i++) {
+        vertex = new Vertex(xp, yp, h, radius, i);
+        add = true;
+        for (j = 0; j < vertices.length; j++) {
+            if (vertices[j].isEqual(vertex)) {
+                add = false;
+                break;
+            }
+        }
+        if (add) {
+            vertices.push(vertex);
+        }
+    }
+}
+
+function addVertexCircles() {
+    vertexes = [];
+    for (i = 0; i < vertices.length; i++) {
+        var enterCircle = svgContainer.append('circle')
+                                .attr('cx', vertices[i].getX()) //centers[i][0])
+                                .attr('cy', vertices[i].getY()) //centers[i][1])
+                                .attr('r', 15)
+                                .attr('fill', "rgba(0,248,220,0.75)");
+        vertexes.push(enterCircle);
+    }
+    return vertexes;
+}
+
+function changeNumberColors() {
+    var textFieldsList = svgContainer.selectAll("text")[0];
+    for (i = 0; i < textFieldsList.length; i++){
+        var num = svgContainer.selectAll("text")[0][i].innerHTML;
+        if (svgContainer.selectAll("text")[0][i].attributes.fill.value == "red") {
+            if (num != "6" && num != "8") {
+                svgContainer.selectAll("text")[0][i].attributes.fill.value = "black";
+            }
+        }
+    }
+}
+
+//Add SVG Text Element Attributes
+function addNumbersToCircles() {
+    var textLabels = text
+                .attr("x", function(d) { return d.cx.baseVal.value; })
+                .attr("y", function(d) { return d.cy.baseVal.value +7; })
+                .text( function (d) { return getNextNumber(); })
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "20px")
+                .attr("fill", "red")
+                .style("text-anchor", "middle");
+}
+
+function addOnClickListenerToVertices(vertexCircles) {
+    for (i = 0; i < vertexCircles.length; i++) {
+        var circle = vertexCircles[i][0][0];
+        circle.addEventListener("click", myFunction);
+    }
+}
+
+function myFunction() {
+    alert ("Hello World!");
 }
