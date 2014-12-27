@@ -2,7 +2,11 @@ function Vertex(xp, yp, h, radius, index) {
 
 	var x = 0;
 	var y = 0;
-	var downShift = 20
+	var hexagons = [];
+	var diceNumbers = [];
+
+
+	var downShift = 20;
 	var upDown = 8;
 
 	var __construct = function(argument) {
@@ -40,4 +44,20 @@ function Vertex(xp, yp, h, radius, index) {
     	return x === vertex.getX() && y === vertex.getY();
     }
 
+    this.addHexagon = function(number) {
+    	hexagons.push(number);
+    	return;
+    }
+
+    this.getHexagons = function() {
+    	return hexagons;
+    }
+
+    this.addNumber = function(number) {
+    	diceNumbers.push(number);
+    }
+
+    this.getNumbers = function() {
+    	return diceNumbers;
+    }
 }

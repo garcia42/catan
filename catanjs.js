@@ -39,15 +39,15 @@ var numberCount = []; // i.e  -    The numbers 0 - 12, in their total numbers on
 var vertices = []; // going to be added using the centers and calculations.
 
 for (i = 2; i <= 12; i++) {
-	if (i == 7) {
-		continue;
-	}
-	if (i == 2 || i == 12) {
-		numberCount.push(i);
-	} else {
-		numberCount.push(i);
-		numberCount.push(i);
-	}
+    if (i == 7) {
+        continue;
+    }
+    if (i == 2 || i == 12) {
+        numberCount.push(i);
+    } else {
+        numberCount.push(i);
+        numberCount.push(i);
+    }
 }
 
 var centers = [];
@@ -72,12 +72,12 @@ while (rowsLeft > 0) {
           { "x": radius/2+xp, "y": -radius*h+yp}
         ];
 
-        addVertex(xp, yp, h, radius);
+        addVertex(xp, yp, h, radius, count);
 
         centers.push([xp, yp]);
 
         if (count == noCircle) {
-        	randomNumber = 5;
+            randomNumber = 5;
         }
         var enterElements = 
             svgContainer.append("path")
@@ -88,13 +88,13 @@ while (rowsLeft > 0) {
                         .attr("fill", colors[randomNumber]);
         
         if (count != noCircle) {
-	    	var enterCircle = svgContainer.append('circle')
-							.attr('cx', xp) //centers[i][0])
-							.attr('cy', yp) //centers[i][1])
-							.attr('r', 25)
-							.attr('fill', "rgba(255,248,220,0.75)");
-		}
-		count++;
+            var enterCircle = svgContainer.append('circle')
+                            .attr('cx', xp) //centers[i][0])
+                            .attr('cy', yp) //centers[i][1])
+                            .attr('r', 25)
+                            .attr('fill', "rgba(255,248,220,0.75)");
+        }
+        count++;
         hexagonsRemaining--;
     }
     hexagonsRemaining = tmphexRem + 1;
@@ -122,15 +122,16 @@ var text = svgContainer.selectAll("text")
 
 addNumbersToCircles();
 changeNumberColors();
+addNumbersToVertices();
 vertexCircles = addVertexCircles();
 addOnClickListenerToVertices(vertexCircles);
 
 //Getting the next number for a square
 function getNextNumber() {
-	var random = Math.floor(Math.random()*numberCount.length);
-	var toReturn = numberCount[random];
-	numberCount.splice(random, 1);
-	return toReturn;
+    var random = Math.floor(Math.random()*numberCount.length);
+    var toReturn = numberCount[random];
+    numberCount.splice(random, 1);
+    return toReturn;
 }
 
 //Do not currently have support for adjacent squares not being of same type.
@@ -154,13 +155,15 @@ function getDiceRoll() {
     return [one, two];
 }
 
-function addVertex(xp, yp, h, radius) {
+function addVertex(xp, yp, h, radius, count) {
     for (i = 0; i < 6; i++) {
         vertex = new Vertex(xp, yp, h, radius, i);
         add = true;
+        vertex.addHexagon(count);
         for (j = 0; j < vertices.length; j++) {
             if (vertices[j].isEqual(vertex)) {
                 add = false;
+                vertices[j].addHexagon(count);
                 break;
             }
         }
@@ -216,4 +219,21 @@ function addOnClickListenerToVertices(vertexCircles) {
 
 function myFunction() {
     alert ("Hello World!");
+}
+
+function addNumbersToVertices() {
+    var texts = svgContainer.selectAll("text")[0];
+    var realHexagonIndex = 0;
+    for (i = 0; i < texts.length; i++, realHexagonIndex++) {
+        if (i == noCircle) {        // make sure on correct hexagon, can skip the no text hexagon
+            realHexagonIndex++;
+        }
+        var hexNumber = texts[i].textContent;
+        console.log((hexNumber));
+        for (j = 0; j < vertices.length; j++) { //find matching vertices of the real index
+            if (vertices[j].getHexagons().indexOf(realHexagonIndex) > -1) {
+                vertices[j].addNumber(parseInt(hexNumber));
+            }
+        }
+    }
 }
