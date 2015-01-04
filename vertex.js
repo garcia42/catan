@@ -4,14 +4,18 @@ function Vertex(xp, yp, h, radius, index) {
 	var y = 0;
 	var hexagons = [];
 	var diceNumbers = [];
+	var neighbors = [];
 
 
-	var downShift = 20;
-	var upDown = 8;
+	var downShift = 20 * scale;
+	var upDown = 8 * scale;
 
 	var __construct = function(argument) {
 
-		if (index == 0) { // up
+		if (index == -1) {
+			x = xp;
+			y = yp;
+		} else if (index == 0) { // up
 			x = xp;
 			y = yp - radius - upDown;
 		} else if (index == 1) { // up right
@@ -59,5 +63,13 @@ function Vertex(xp, yp, h, radius, index) {
 
     this.getNumbers = function() {
     	return diceNumbers;
+    }
+
+    this.addNeighbor = function(neighbor) {
+    	neighbors.push(neighbor);
+    }
+
+    this.getNeighbors = function() {
+    	return neighbors;
     }
 }
