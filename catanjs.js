@@ -122,9 +122,6 @@ var text = svgContainer.selectAll("text")
                         .data(svgContainer.selectAll("circle")[0])
                         .enter()
                         .append("text");
-var d = new Date();
-console.log(d.getSeconds())
-console.log(d.getMilliseconds())
 addNumbersToCircles();
 changeNumberColors();
 addNumbersToVertices();
@@ -132,9 +129,6 @@ vertexCircles = addVertexCircles();
 addOnClickListenerToVertices(vertexCircles);
 addVertexNeighbors();
 addRoadsBetweenNeighbors();
-
-console.log(d.getSeconds())
-console.log(d.getMilliseconds())
 
 // fixAdjacentRedNumbers();
 
@@ -168,20 +162,32 @@ function addRoadsBetweenNeighbors() {
                 }
             }
             if (add) {
-                roads.add(road);
+                roads.push(road);
             }
         }
     }
 
     // Draw the lines
+    roadObjects = []
     for (i = 0; i < roads.length; i++) {
-        var line = svgContainer.append("line")
-                            .attr("x1", 5)
-                            .attr("y1", 5)
-                            .attr("x2", 50)
-                            .attr("y2", 50)
-                            .attr("stroke-width", 2)
-                            .attr("stroke", "black");
+        roads[i].getYList()[0]
+        if (i != 0) {
+            var line = svgContainer.append("line")
+                                .attr("x1", roads[i].getXList()[0])
+                                .attr("y1", roads[i].getYList()[0])
+                                .attr("x2", roads[i].getXList()[1])
+                                .attr("y2", roads[i].getYList()[1])
+                                .attr("stroke-width", 3)
+                                .attr("stroke", "transparent");
+            roadObjects.push(line)
+        }
+    }
+
+    for (i = 0; i < roadObjects.length; i++) {
+        var road = roadObjects[i][0][0];
+        road.addEventListener("click", function(road) {
+            var i = road;
+            i.target.attributes.stroke.value = "black"}, false);
     }
 
 }
@@ -295,6 +301,10 @@ function addOnClickListenerToVertices(vertexCircles) {
 
 function myFunction() {
     alert ("Hello World!");
+}
+
+function drawRoadClick() {
+
 }
 
 function addNumbersToVertices() {
