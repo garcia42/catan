@@ -41,6 +41,8 @@ var numberCount = []; // i.e  -    The numbers 0 - 12, in their total numbers on
 
 var vertices = []; // going to be added using the centers and calculations.
 
+var xAndY = [];  // to be used to add desert circle at end
+
 for (i = 2; i <= 12; i++) {
     if (i == 7) {
         continue;
@@ -89,13 +91,22 @@ while (rowsLeft > 0) {
                         .attr("stroke-line","20,5")
                         .attr("stroke-width", 3)
                         .attr("fill", colors[randomNumber]);
-        
         if (count != noCircle) {
             var enterCircle = svgContainer.append('circle')
+                            .attr('type', "enterCircle")
                             .attr('cx', xp) //centers[i][0])
                             .attr('cy', yp) //centers[i][1])
                             .attr('r', 25)
-                            .attr('fill', "rgba(255,248,220,0.75)");
+                            .attr('fill', "rgba(255,248,220,0.8)");
+        } else {
+            xAndY.push(xp);
+            xAndY.push(yp);
+            var robier = svgContainer.append('rect')
+                            .attr('x', xp - 25) //centers[i][0])
+                            .attr('y', yp -25) //centers[i][1])
+                            .attr('width', 50)
+                            .attr('height', 50)
+                            .attr('fill', "rgba(255,0,0,1)");
         }
         count++;
         hexagonsRemaining--;
@@ -127,8 +138,58 @@ changeNumberColors();
 addNumbersToVertices();
 vertexCircles = addVertexCircles();
 addOnClickListenerToVertices(vertexCircles);
+//moveCirclesInFrontOfText();   // Either this or make a event listener for the text.
+moveRobberToTheFront();
 addVertexNeighbors();
 addRoadsBetweenNeighbors();
+getDiceRoll();
+addDesertCircle();
+addOnClickListenerToEnterCircles();  // supposed to be center circle
+
+
+
+function addDesertCircle() {
+    var enterCircle = svgContainer.append('circle')
+                .attr('type', "enterCircle")
+                .attr('cx', xAndY[0]) //centers[i][0])
+                .attr('cy', xAndY[1]) //centers[i][1])
+                .attr('r', 25)
+                .attr('fill', "rgba(255,248,220,0)");
+}
+
+
+function moveCirclesInFrontOfText() {
+    circles = svgContainer.selectAll("circle")[0];
+    for (i = 0; i < circles.length; i++) {
+        if (circles[i].attributes.type.value == "enterCircle") {
+                d3.select(circles[i]).each(function(){
+          this.parentNode.appendChild(this);
+          });
+        }
+    }
+}
+
+function moveRobberToTheFront() {
+    //puts robber in front of all other elements
+    d3.select(svgContainer.select("rect")[0][0]).each(function(){
+  this.parentNode.appendChild(this);
+  });
+}
+
+function addOnClickListenerToEnterCircles() {
+    circles = svgContainer.selectAll("circle")[0];
+    for (i = 0; i < circles.length; i++) {
+        if (circles[i].attributes.type.value == "enterCircle") {
+            circles[i].addEventListener("click", function(texy) {
+                    var i = texy;
+                    var robby = svgContainer.selectAll("rect")[0][0];
+                    console.log(i);
+                    robby.setAttribute("x", i.target.attributes.cx.value - 25);
+                    robby.setAttribute("y", i.target.attributes.cy.value - 25);
+                }, false);
+        }
+    }
+}
 
 // fixAdjacentRedNumbers();
 
@@ -171,16 +232,14 @@ function addRoadsBetweenNeighbors() {
     roadObjects = []
     for (i = 0; i < roads.length; i++) {
         roads[i].getYList()[0]
-        if (i != 0) {
-            var line = svgContainer.append("line")
-                                .attr("x1", roads[i].getXList()[0])
-                                .attr("y1", roads[i].getYList()[0])
-                                .attr("x2", roads[i].getXList()[1])
-                                .attr("y2", roads[i].getYList()[1])
-                                .attr("stroke-width", 3)
-                                .attr("stroke", "transparent");
-            roadObjects.push(line)
-        }
+        var line = svgContainer.append("line")
+                            .attr("x1", roads[i].getXList()[0])
+                            .attr("y1", roads[i].getYList()[0])
+                            .attr("x2", roads[i].getXList()[1])
+                            .attr("y2", roads[i].getYList()[1])
+                            .attr("stroke-width", 4)
+                            .attr("stroke", "transparent");
+        roadObjects.push(line)
     }
 
     for (i = 0; i < roadObjects.length; i++) {
@@ -232,8 +291,20 @@ function getRandomTileNumber() {
 }
 
 function getDiceRoll() {
-    var one = Math.floor(Math.random()*6);
-    var two = Math.floor(Math.random()*6);
+    var one = Math.floor(Math.random()*6) + 1;
+    var two = Math.floor(Math.random()*6) + 1;
+    var dice1 = document.getElementById("dice1");
+    var dice2 = document.getElementById("dice2");
+    dice1.src="dice-rolling-" + one.toString() + ".png"
+    dice2.src="dice-rolling-" + two.toString() + ".png"
+    if (one + two == 7) {
+        var circlelists = document.getElementsByTagName("circle");
+        for (i = 0; i < circlelists.length; i++) {
+            if (circlelists[i].attributes.type.value == "enterCircle") {
+                circlelists[i].style.cursor = "hand";
+            }
+        }
+    }
     return [one, two];
 }
 
@@ -259,10 +330,11 @@ function addVertexCircles() {
     vertexes = [];
     for (i = 0; i < vertices.length; i++) {
         var enterCircle = svgContainer.append('circle')
+                                    .attr('type', "vertexcircle")
                                 .attr('cx', vertices[i].getX()) //centers[i][0])
                                 .attr('cy', vertices[i].getY()) //centers[i][1])
                                 .attr('r', 15)
-                                .attr('fill', "rgba(0,248,220,0.75)");
+                                .attr('fill', "rgba(0,248,220,0.0)");
         vertexes.push(enterCircle);
     }
     return vertexes;
@@ -295,7 +367,9 @@ function addNumbersToCircles() {
 function addOnClickListenerToVertices(vertexCircles) {
     for (i = 0; i < vertexCircles.length; i++) {
         var circle = vertexCircles[i][0][0];
-        circle.addEventListener("click", myFunction);
+        circle.addEventListener("click", function(circle) {
+            var i = circle;
+            i.target.attributes.fill.value = "yellow"}, false);
     }
 }
 
@@ -320,6 +394,8 @@ function addNumbersToVertices() {
                 vertices[j].addNumber(parseInt(hexNumber));
             }
         }
+
+
     }
 }
 
