@@ -48,21 +48,12 @@ function Vertex(xp, yp, h, radius, index) {
     	return x === vertex.getX() && y === vertex.getY();
     }
 
-    this.addHexagon = function(number) {
-    	hexagons.push(number);
-    	return;
+    this.addHexagon = function(hex) {
+    	hexagons.push(hex);
     }
 
     this.getHexagons = function() {
     	return hexagons;
-    }
-
-    this.addNumber = function(number) {
-    	diceNumbers.push(number);
-    }
-
-    this.getNumbers = function() {
-    	return diceNumbers;
     }
 
     this.addNeighbor = function(neighbor) {

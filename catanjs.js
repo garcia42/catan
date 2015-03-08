@@ -32,6 +32,7 @@ var svgContainer =
       .attr("width", containerHeight)
       .attr("height", containerWidth);
 
+//rsc = {CLAY:0,WHEAT:1,SHEEP:2,WOOD:3,ORE:4,DESERT:5}
 //red, yellow, light-green, green, grey, tan
 var colors = ["rgba(255,0,0,0.4)", "rgba(255,255,0,0.4)", "rgba(0,255,0,0.4)", "rgba(0,102,0,0.4)", "rgba(96,96,96,0.4)", "rgba(255,255,204,0.4)"];
 
@@ -42,6 +43,8 @@ var numberCount = []; // i.e  -    The numbers 0 - 12, in their total numbers on
 var vertices = []; // going to be added using the centers and calculations.
 
 var xAndY = [];  // to be used to add desert circle at end
+
+var hexagons = []; // used for giving hexagons to add diceNumber
 
 for (i = 2; i <= 12; i++) {
     if (i == 7) {
@@ -59,6 +62,7 @@ var centers = [];
 
 var noCircle = Math.floor(Math.random()*18);
 var count = 0;
+var order = [];
 while (rowsLeft > 0) {
     var tmphexRem = hexagonsRemaining;
     var tmpX = xp;
@@ -66,7 +70,6 @@ while (rowsLeft > 0) {
         xp += hexagonWidth;
 
         var randomNumber = getRandomColorNumber()
-        //var randomNumber = Math.floor(Math.random()*5);
 
         hexagonData = [
           { "x": radius+xp,   "y": yp}, 
@@ -76,8 +79,6 @@ while (rowsLeft > 0) {
           { "x": -radius/2+xp,  "y": -radius*h+yp},
           { "x": radius/2+xp, "y": -radius*h+yp}
         ];
-
-        addVertex(xp, yp, h, radius, count);
 
         centers.push([xp, yp]);
 
@@ -91,6 +92,12 @@ while (rowsLeft > 0) {
                         .attr("stroke-line","20,5")
                         .attr("stroke-width", 3)
                         .attr("fill", colors[randomNumber]);
+
+            hexagons.push(new Hexagon(count, randomNumber));
+
+        addVertex(xp, yp, h, radius, count);
+
+
         if (count != noCircle) {
             var enterCircle = svgContainer.append('circle')
                             .attr('type', "enterCircle")
@@ -98,9 +105,11 @@ while (rowsLeft > 0) {
                             .attr('cy', yp) //centers[i][1])
                             .attr('r', 25)
                             .attr('fill', "rgba(255,248,220,0.8)");
+            order.push(enterCircle[0][0]);
         } else {
             xAndY.push(xp);
             xAndY.push(yp);
+            order.push(-1);
             var robier = svgContainer.append('rect')
                             .attr('x', xp - 25) //centers[i][0])
                             .attr('y', yp -25) //centers[i][1])
@@ -135,7 +144,7 @@ var text = svgContainer.selectAll("text")
                         .append("text");
 addNumbersToCircles();
 changeNumberColors();
-addNumbersToVertices();
+addNumbersToHexagons();
 vertexCircles = addVertexCircles();
 addOnClickListenerToVertices(vertexCircles);
 //moveCirclesInFrontOfText();   // Either this or make a event listener for the text.
@@ -147,7 +156,6 @@ addDesertCircle();
 addOnClickListenerToEnterCircles();  // supposed to be center circle
 
 
-
 function addDesertCircle() {
     var enterCircle = svgContainer.append('circle')
                 .attr('type', "enterCircle")
@@ -155,6 +163,11 @@ function addDesertCircle() {
                 .attr('cy', xAndY[1]) //centers[i][1])
                 .attr('r', 25)
                 .attr('fill', "rgba(255,248,220,0)");
+    for (i = 0; i < order.length; i++) {
+        if (order[i] == -1) {
+            order[i] = enterCircle[0][0];
+        }
+    }
 }
 
 
@@ -183,7 +196,14 @@ function addOnClickListenerToEnterCircles() {
             circles[i].addEventListener("click", function(texy) {
                     var i = texy;
                     var robby = svgContainer.selectAll("rect")[0][0];
-                    console.log(i);
+                    robberIndex = order.indexOf(i.target);
+                    for (j = 0; j < vertices.length; j++) {
+
+                        var hexagons = vertices[j].getHexagons();
+                        if (hexagons.indexOf(robberIndex)) {
+
+                        }
+                    }
                     robby.setAttribute("x", i.target.attributes.cx.value - 25);
                     robby.setAttribute("y", i.target.attributes.cy.value - 25);
                 }, false);
@@ -248,7 +268,6 @@ function addRoadsBetweenNeighbors() {
             var i = road;
             i.target.attributes.stroke.value = "black"}, false);
     }
-
 }
 
 
@@ -373,65 +392,15 @@ function addOnClickListenerToVertices(vertexCircles) {
     }
 }
 
-function myFunction() {
-    alert ("Hello World!");
-}
-
-function drawRoadClick() {
-
-}
-
-function addNumbersToVertices() {
+function addNumbersToHexagons() {
     var texts = svgContainer.selectAll("text")[0];
     var realHexagonIndex = 0;
     for (i = 0; i < texts.length; i++, realHexagonIndex++) {
         if (i == noCircle) {        // make sure on correct hexagon, can skip the no text hexagon
             realHexagonIndex++;
         }
+
         var hexNumber = texts[i].textContent;
-        for (j = 0; j < vertices.length; j++) { //find matching vertices of the real index
-            if (vertices[j].getHexagons().indexOf(realHexagonIndex) > -1) {
-                vertices[j].addNumber(parseInt(hexNumber));
-            }
-        }
-
-
+        hexagons[i].setDiceNumber(parseInt(hexNumber));
     }
 }
-
-// function fixAdjacentRedNumbers() {
-//     adj = true;
-//     while (adj) {
-//         adj = false;
-//         for (i = 0; i < vertices.length; i++) {
-//             ns = vertices[i].getNumbers().slice(0);
-//             var hasSix = false;
-//             var hasEight = false;
-//             if (ns.indexOf(6) > -1) {
-//                 hasSix = true;
-//                 ns = ns.splice(ns.indexOf(6))
-//             }
-//             if (ns.indexOf(8) > -1) {
-//                 hasEight = true;
-//                 ns = ns.splice(ns.indexOf(8))
-//             }
-//             if ((hasSix && hasEight) || (hasSix && ns.indexOf(6) > -1) || (hasEight && ns.indexOf(8) > -1)) {
-//                 adj = true;
-//                 switchNumbers(vertices[i]);
-//                 //do the switch
-//             }
-//         }
-//     }
-// }
-
-
-//     var textFieldsList = svgContainer.selectAll("text")[0];
-//     for (i = 0; i < textFieldsList.length; i++){
-//         var num = svgContainer.selectAll("text")[0][i].innerHTML;
-//         if (svgContainer.selectAll("text")[0][i].attributes.fill.value == "red") {
-//             if (num != "6" && num != "8") {
-//                 svgContainer.selectAll("text")[0][i].attributes.fill.value = "black";
-//             }
-//         }
-//     }
-// }

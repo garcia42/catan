@@ -1,14 +1,31 @@
-function Hexagon(x, y, z, xp, yp, h, radius) {
+function Hexagon(index, resource) {
 
-	this.up = [radius+xp, yp];
-	this.upRight = [radius/2+xp, radius*h+yp];
-	this.upLeft = [-radius/2+xp, radius*h+yp];
-	this.down = [-radius+xp, yp]
-	this.downLeft = [-radius/2+xp, -radius*h+yp];
-	this.downRight = [radius/2+xp, -radius*h+yp];
+    var index = index;
+    var resourceIndex = resource;
+    var diceNumber = -1;
 
-	this.x = x;
-	this.y = y;
-	this.z = z;
+    this.getCircle = function() {
+    	return circle;
+    }
+
+    this.getIndex = function() {
+    	return index;
+    }
+
+    this.getDiceNumber = function() {
+    	return diceNumber;
+    }
+
+    this.setDiceNumber = function(kunalAndJesus) {
+    	diceNumber = kunalAndJesus;
+    }
+
+    this.getResource = function() {
+    	return resourceIndex;
+    }
+
+    this.isRobbered = function() {
+		return index == robberIndex;
+	}
 
 }
