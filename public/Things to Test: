@@ -1,0 +1,26 @@
+Things to Test:
+
+Finished:
+
+Vertices
+1) Now uses instance variables
+2) Added Ui elements to vertex object
+3) Refactored code to make the town circles
+4) Added Roads
+
+Roads
+1) Now use instance variables
+2) Can get what color road is, and if visible
+3) Began work on longest road
+4) Added lines to roads
+5) Refactored how roads are created to be more clear
+6) Can now get road neighbors
+7) Can get all roads of a certain color
+8) Can get all neighbors of a road that are a certain color
+9) Can find the end of the road chain of a certain color
+
+ToDo:
+
+Use new roads in vertices to find longest road
+Turn lists of objects to dictionary of keys and objects
+Instead of comparing roads using x and y, compare them using id
