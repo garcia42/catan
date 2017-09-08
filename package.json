@@ -1,9 +1,25 @@
 {
-	"name": "catan",
-	"version": "0.0.1",
-	"description": "Catan App",
-	"dependencies": {
-		"socket.io": "~.0.9.6",
-		"mime": "~1.2.7"
-	}
+  "name": "catan",
+  "version": "0.0.1",
+  "description": "Catan App",
+  "dependencies": {
+    "mime": "~1.2.7"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "main": "server.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/garcia42/catan.git"
+  },
+  "keywords": [
+    "catan"
+  ],
+  "author": "garcia42",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/garcia42/catan/issues"
+  },
+  "homepage": "https://github.com/garcia42/catan#readme"
 }
