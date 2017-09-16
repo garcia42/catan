@@ -1,4 +1,4 @@
-var socketio = require('socket.io');
+var catanServer = require('./catan-server');
 var io;
 var nickNames = {};
 var namesUsed = [];
@@ -11,25 +11,25 @@ var currentRoom = {};
 // 3) Are socket.join and socket.leave helper functions?
 // 4) what is io.sockets.manager.rooms?
 
-exports.listen = function(server) {
-	io = socketio.listen(server);
+exports.onConnection = function(socket, fieldio) {
+	io = fieldio;
+	guestNumber = assignGuestName(socket, guestNumber, nickNames, namesUsed);
+	joinRoom(socket, 'Lobby');
 
-	// io.set('log level', 1);
-	io.sockets.on('connection', function(socket) {
-		guestNumber = assignGuestName(socket, guestNumber, nickNames, namesUsed);
-		joinRoom(socket, 'Lobby');
+	handleMessageBroadcast(socket, nickNames);
+	handleNameChangeAttempts(socket, nickNames, namesUsed);
+	handleRoomJoining(socket);
 
-		handleMessageBroadcast(socket, nickNames);
-		handleNameChangeAttempts(socket, nickNames, namesUsed);
-		handleRoomJoining(socket);
-
-		socket.on('rooms', function() {
-			socket.emit('rooms', io.sockets.adapter.rooms);
-		});
-
-		handleUserDisconnection(socket, nickNames, namesUsed);
+	socket.on('rooms', function() {
+		socket.emit('rooms', io.sockets.adapter.rooms);
 	});
-}
+
+	handleUserDisconnection(socket, nickNames, namesUsed);
+	// socket.leave(socket.id); //Added this because sockets join a room of their own socket id.
+	catanServer.handleBoardCreation(socket, currentRoom);
+};
+
+exports.guestNumber = guestNumber;
 
 function assignGuestName(socket, guestNumber, nickNames, namesUsed) {
 	socket.guestNumber = guestNumber;
@@ -96,8 +96,10 @@ function handleMessageBroadcast(socket, nickNames) {
 
 function handleRoomJoining(socket) {
 	socket.on('join', function(room) {
+		console.log("Chat Server: In Join Function new room: ", room, " current Room: ", currentRoom[socket.id]);
 		socket.leave(currentRoom[socket.id]);
-		joinRoom(socket, room);
+		joinRoom(socket, room["newRoom"]);
+		catanServer.handleBoardCreation(socket, currentRoom);
 	});
 }
 

@@ -3,7 +3,9 @@
   "version": "0.0.1",
   "description": "Catan App",
   "dependencies": {
-    "mime": "~1.2.7"
+    "mime": "~1.2.7",
+    "socket.io": "~2.0.3",
+    "jquery": "~3.2.1"
   },
   "scripts": {
     "start": "node server.js"

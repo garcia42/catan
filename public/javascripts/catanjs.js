@@ -1,30 +1,8 @@
 var scale = 1;
-var hexagonsRemaining = 3;
-var rowsLeft = 5;
-var hexagonWidth = 100 * scale;
-var rowHeight = 88 * scale;
 var containerHeight = 900 * scale;
 var containerWidth = 600 * scale;
-
-var h = (Math.sqrt(3)/2),
-    radius = 50 * scale,
-    xp = 190,
-    yp = 110,
-    hexagonData = [
-      { "x": radius+xp,   "y": yp}, 
-      { "x": radius/2+xp,  "y": radius*h+yp},
-      { "x": -radius/2+xp,  "y": radius*h+yp},
-      { "x": -radius+xp,  "y": yp},
-      { "x": -radius/2+xp,  "y": -radius*h+yp},
-      { "x": radius/2+xp, "y": -radius*h+yp}
-    ]
-
-drawHexagon = 
-    d3.svg.line()
-        .x(function(d) { return d.x; })
-        .y(function(d) { return d.y; })
-        .interpolate("cardinal-closed")
-        .tension("0.25");
+var h = (Math.sqrt(3)/2);
+var radius = 50 * scale;
 
 var svgContainer = 
     d3.select("body")
@@ -36,140 +14,137 @@ var svgContainer =
 //red, yellow, light-green, green, grey, tan
 var colors = ["rgba(255,0,0,0.4)", "rgba(255,255,0,0.4)", "rgba(0,255,0,0.4)", "rgba(0,102,0,0.4)", "rgba(96,96,96,0.4)", "rgba(255,255,204,0.4)"];
 
-var colorCount = [0, 0, 0, 0, 0];
-
-var numberCount = []; // i.e  -    The numbers 0 - 12, in their total numbers on the board
-
 var vertices = []; // going to be added using the centers and calculations.
 
 var xAndY = [];  // to be used to add desert circle at end
 
 var hexagons = []; // used for giving hexagons to add diceNumber
 
-for (i = 2; i <= 12; i++) {
-    if (i == 7) {
-        continue;
-    }
-    if (i == 2 || i == 12) {
-        numberCount.push(i);
-    } else {
-        numberCount.push(i);
-        numberCount.push(i);
-    }
-}
-
 var centers = [];
 
 var noCircle = Math.floor(Math.random()*18);
-var count = 0;
 var order = [];
-while (rowsLeft > 0) {
-    var tmphexRem = hexagonsRemaining;
-    var tmpX = xp;
-    while (hexagonsRemaining > 0) {
-        xp += hexagonWidth;
 
-        var randomNumber = getRandomColorNumber()
+console.log(socket);
 
-        hexagonData = [
-          { "x": radius+xp,   "y": yp}, 
-          { "x": radius/2+xp,  "y": radius*h+yp},
-          { "x": -radius/2+xp,  "y": radius*h+yp},
-          { "x": -radius+xp,  "y": yp},
-          { "x": -radius/2+xp,  "y": -radius*h+yp},
-          { "x": radius/2+xp, "y": -radius*h+yp}
-        ];
+$(document).ready(function() {
 
-        centers.push([xp, yp]);
+    socket.on('newBoard', function(hexagonServerData) {
+        console.log("Drawing Board");
+        // createHexagonBoard(hexagonServerData);
+        drawBoard(hexagonServerData);
+        console.log("Adding Numbers to Circles");
+        addNumbersToCircles(hexagonServerData);
+        changeNumberColors();
+        addNumbersToHexagons();
+        vertexCircles = addVertexCircles();
+        addOnClickListenerToVertices(vertexCircles);
+        //moveCirclesInFrontOfText();   // Either this or make a event listener for the text.
+        moveRobberToTheFront();
+        addVertexNeighbors();
+        addRoadsBetweenNeighbors();
+        getDiceRoll();
+        addOnClickListenerToEnterCircles();  // supposed to be center circle
+    });
 
-        if (count == noCircle) {
-            randomNumber = 5;
+    console.log("Ready to Receive Board ", socket.id);
+    socket.emit("receiveBoard", true);
+});
+
+function drawBoard(hexagonServerData) {
+    svgContainer.selectAll("*").remove();
+
+    var hexagonsRemaining = 3;
+    var rowsLeft = 5;
+    var count = 0;
+
+    var xp = 190;
+    var yp = 110;
+    var hexagonWidth = 100 * scale;
+    var rowHeight = 88 * scale;
+
+    drawHexagon = 
+        d3.svg.line()
+            .x(function(d) { return d.x; })
+            .y(function(d) { return d.y; })
+            .interpolate("cardinal-closed")
+            .tension("0.25");
+
+    while (rowsLeft > 0) {
+        var tmphexRem = hexagonsRemaining;
+        var tmpX = xp;
+        while (hexagonsRemaining > 0) {
+            xp += hexagonWidth;
+
+            hexagonData = [
+              { "x": radius+xp,   "y": yp}, 
+              { "x": radius/2+xp,  "y": radius*h+yp},
+              { "x": -radius/2+xp,  "y": radius*h+yp},
+              { "x": -radius+xp,  "y": yp},
+              { "x": -radius/2+xp,  "y": -radius*h+yp},
+              { "x": radius/2+xp, "y": -radius*h+yp}
+            ];
+
+            centers.push([xp, yp]);
+
+            var enterElements = 
+                svgContainer.append("path")
+                            .attr("d", drawHexagon(hexagonData))
+                            .attr("stroke", "red")
+                            .attr("stroke-line","20,5")
+                            .attr("stroke-width", 3)
+                            .attr("fill", colors[hexagonServerData[ count]['color']]);
+
+                hexagons.push(new Hexagon(count, hexagonServerData[count]['color']));
+
+            addVertex(xp, yp, h, radius, count);
+
+            if (hexagonServerData[count]['color'] != 5) {
+                var enterCircle = svgContainer.append('circle')
+                    .attr('type', "enterCircle")
+                    .attr('cx', xp) //centers[i][0])
+                    .attr('cy', yp) //centers[i][1])
+                    .attr('r', 25)
+                    .attr('fill', "rgba(255,248,220,0.8)");
+
+                order.push(enterCircle[0][0]);
+            } else {
+                order.push(-1);
+
+                var enterCircle = svgContainer.append('circle')
+                    .attr('type', "enterCircle")
+                    .attr('cx', xp) //centers[i][0])
+                    .attr('cy', yp) //centers[i][1])
+                    .attr('r', 25)
+                    .attr('fill', "rgba(255,248,220,0)");
+
+                var robier = svgContainer.append('rect')
+                                .attr('x', xp - 25) //centers[i][0])
+                                .attr('y', yp -25) //centers[i][1])
+                                .attr('width', 50)
+                                .attr('height', 50)
+                                .attr('fill', "rgba(255,0,0,1)");
+            }
+            count++;
+            hexagonsRemaining--;
         }
-        var enterElements = 
-            svgContainer.append("path")
-                        .attr("d", drawHexagon(hexagonData))
-                        .attr("stroke", "red")
-                        .attr("stroke-line","20,5")
-                        .attr("stroke-width", 3)
-                        .attr("fill", colors[randomNumber]);
-
-            hexagons.push(new Hexagon(count, randomNumber));
-
-        addVertex(xp, yp, h, radius, count);
-
-
-        if (count != noCircle) {
-            var enterCircle = svgContainer.append('circle')
-                            .attr('type', "enterCircle")
-                            .attr('cx', xp) //centers[i][0])
-                            .attr('cy', yp) //centers[i][1])
-                            .attr('r', 25)
-                            .attr('fill', "rgba(255,248,220,0.8)");
-            order.push(enterCircle[0][0]);
-        } else {
-            xAndY.push(xp);
-            xAndY.push(yp);
-            order.push(-1);
-            var robier = svgContainer.append('rect')
-                            .attr('x', xp - 25) //centers[i][0])
-                            .attr('y', yp -25) //centers[i][1])
-                            .attr('width', 50)
-                            .attr('height', 50)
-                            .attr('fill', "rgba(255,0,0,1)");
+        hexagonsRemaining = tmphexRem + 1;
+        xp = tmpX;
+        yp += rowHeight;
+        rowsLeft--;
+        if (rowsLeft == 4) {
+            xp -= hexagonWidth/2
+        } else if (rowsLeft == 3) {
+            xp -= hexagonWidth/2
+        } else if (rowsLeft == 2) {
+            xp += hexagonWidth/2
+            hexagonsRemaining = 4
+        } else if (rowsLeft == 1) {
+            xp += hexagonWidth/2
+            hexagonsRemaining = 3
         }
-        count++;
-        hexagonsRemaining--;
-    }
-    hexagonsRemaining = tmphexRem + 1;
-    xp = tmpX;
-    yp += rowHeight;
-    rowsLeft--;
-    if (rowsLeft == 4) {
-        xp -= hexagonWidth/2
-    } else if (rowsLeft == 3) {
-        xp -= hexagonWidth/2
-    } else if (rowsLeft == 2) {
-        xp += hexagonWidth/2
-        hexagonsRemaining = 4
-    } else if (rowsLeft == 1) {
-        xp += hexagonWidth/2
-        hexagonsRemaining = 3
     }
 }
-
-//Add the SVG Text Element to the svgContainer
-var text = svgContainer.selectAll("text")
-                        .data(svgContainer.selectAll("circle")[0])
-                        .enter()
-                        .append("text");
-addNumbersToCircles();
-changeNumberColors();
-addNumbersToHexagons();
-vertexCircles = addVertexCircles();
-addOnClickListenerToVertices(vertexCircles);
-//moveCirclesInFrontOfText();   // Either this or make a event listener for the text.
-moveRobberToTheFront();
-addVertexNeighbors();
-addRoadsBetweenNeighbors();
-getDiceRoll();
-addDesertCircle();
-addOnClickListenerToEnterCircles();  // supposed to be center circle
-
-
-function addDesertCircle() {
-    var enterCircle = svgContainer.append('circle')
-                .attr('type', "enterCircle")
-                .attr('cx', xAndY[0]) //centers[i][0])
-                .attr('cy', xAndY[1]) //centers[i][1])
-                .attr('r', 25)
-                .attr('fill', "rgba(255,248,220,0)");
-    for (i = 0; i < order.length; i++) {
-        if (order[i] == -1) {
-            order[i] = enterCircle[0][0];
-        }
-    }
-}
-
 
 function moveCirclesInFrontOfText() {
     circles = svgContainer.selectAll("circle")[0];
@@ -210,8 +185,6 @@ function addOnClickListenerToEnterCircles() {
         }
     }
 }
-
-// fixAdjacentRedNumbers();
 
 function addVertexNeighbors() {
     for (i = 0; i < vertices.length; i++) { // go through each vertex putting neighbors in
@@ -270,7 +243,6 @@ function addRoadsBetweenNeighbors() {
     }
 }
 
-
 function generatePossibleNeighbors(vertex) {
     var p = [];
     var x = vertex.getX();
@@ -284,29 +256,6 @@ function generatePossibleNeighbors(vertex) {
     p.push(new Vertex(x + radius, y + 28, h, radius, -1));   // right down diagonal
 
     return p;
-}
-
-//Getting the next number for a square
-function getNextNumber() {
-    var random = Math.floor(Math.random()*numberCount.length);
-    var toReturn = numberCount[random];
-    numberCount.splice(random, 1);
-    return toReturn;
-}
-
-//Do not currently have support for adjacent squares not being of same type.
-function getRandomColorNumber() {
-    var randomNumber = Math.floor(Math.random()*5);
-    if (colorCount[randomNumber] > 3) {
-        return getRandomColorNumber();
-    } else {
-        colorCount[randomNumber] += 1;
-        return randomNumber;
-    }
-}
-
-function getRandomTileNumber() {
-    var randomNumber = Math.floor(Math.random()*5);
 }
 
 function getDiceRoll() {
@@ -355,6 +304,7 @@ function addVertexCircles() {
                                 .attr('r', 15)
                                 .attr('fill', "rgba(0,248,220,0.0)");
         vertexes.push(enterCircle);
+        vertices[i].setCircle(enterCircle[0][0]);
     }
     return vertexes;
 }
@@ -371,12 +321,20 @@ function changeNumberColors() {
     }
 }
 
-//Add SVG Text Element Attributes
-function addNumbersToCircles() {
+//Add number to circle ui
+function addNumbersToCircles(hexagonServerData) {
+            //Add the SVG Text Element to the svgContainer
+    var text = svgContainer.selectAll("text")
+                            .data(svgContainer.selectAll("circle")[0])
+                            .enter().append("text");
+    var curHexagon = -1;
     var textLabels = text
                 .attr("x", function(d) { return d.cx.baseVal.value; })
                 .attr("y", function(d) { return d.cy.baseVal.value +7; })
-                .text( function (d) { return getNextNumber(); })
+                .text( function (d) {
+                    curHexagon += 1;
+                    return hexagonServerData[curHexagon]['number']; 
+                })
                 .attr("font-family", "sans-serif")
                 .attr("font-size", "20px")
                 .attr("fill", "red")
@@ -389,9 +347,11 @@ function addOnClickListenerToVertices(vertexCircles) {
         circle.addEventListener("click", function(circle) {
             var i = circle;
             i.target.attributes.fill.value = "yellow"}, false);
+            // socket.emit("vertex", {"":}) (TODO) vertex emit
     }
 }
 
+//Set hexagon javascript object number
 function addNumbersToHexagons() {
     var texts = svgContainer.selectAll("text")[0];
     var realHexagonIndex = 0;

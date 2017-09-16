@@ -43,7 +43,8 @@ $(document).ready(function() {
 	});
 
 	socket.on('joinResult', function(result) {
-		$('#room').text(result.room);
+		console.log(result);
+		$('#room').text(result["room"]);
 		$('#messages').append(divSystemContentElement('Room Changed.'));
 	});
 

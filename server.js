@@ -2,6 +2,7 @@ var http = require('http')
 var fs = require('fs')
 var path = require('path')
 var mime = require('mime')
+var catanServerModule = require('./catan-server-module');
 
 var cache = {}
 
@@ -51,5 +52,4 @@ function serveStatic(response, cache, absPath) {
 server.listen(3000, function() {
 	console.log("Server listening on port 3000.");
 });
-var catanServer = require('./lib/catan-server');
-catanServer.listen(server);
+catanServerModule.listen(server);

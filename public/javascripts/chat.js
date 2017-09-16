@@ -8,6 +8,7 @@ Chat.prototype.sendMessage = function(room, text) {
 		text: text
 	};
 	this.socket.emit('message', message);
+	this.socket.emit('location', null);
 }
 
 Chat.prototype.changeRoom = function(room) {
