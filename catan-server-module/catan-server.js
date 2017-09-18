@@ -2,6 +2,8 @@ var hexagonData = {}; //Channel name to list
 var vertexData = {};
 var roadData = {};
 var playerData = {}; //socket id to playerNumber
+var robberData = {};
+var playerTurn = {};
 
 exports.handleBoardCreation = function createBoard(socket, currentRoom) {
 	var hexagons;
@@ -116,6 +118,12 @@ exports.handleRoadPlacement = function(socket, currentRoom, roadInfo) {
 	roadData[currentRoom[socket.id]][roadId] = playerData[socket.id];
 	roadInfo["playerIndex"] = playerData[socket.id];
 	socket.broadcast.to(currentRoom[socket.id]).emit("road", roadInfo);
+}
+
+exports.handleRobberPlacement = function(socket, currentRoom, robberInfo) {
+	console.log("Robber Movement", robberInfo);
+	robberData[currentRoom[socket.id]] = robberInfo["hexIndex"];
+	socket.broadcast.to(currentRoom[socket.id]).emit("robberPlacement", robberInfo);
 }
 
 // function processVictoryCard() {

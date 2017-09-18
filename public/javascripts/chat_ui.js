@@ -19,7 +19,7 @@ function processUserInput(chatApp, socket) {
 	} else {
 		chatApp.sendMessage($('#room').text(), message);
 		$('#messages').append(divEscapedContentElement(message));
-		$('#messages').scrollTop($('#messages').prop('scrollHeight'));
+		// $('#messages').scrollTop($('#messages').prop('scrollHeight'));
 	}
 
 	$('#send-message').val('');

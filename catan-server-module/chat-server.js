@@ -29,7 +29,14 @@ exports.onConnection = function(socket, fieldio) {
 	catanServer.handleBoardCreation(socket, currentRoom);
 	handleHousePlacement(socket, currentRoom);
 	handleRoadPlacement(socket, currentRoom);
+	handleRobberPlacement(socket, currentRoom);
 };
+
+function handleRobberPlacement(socket, currentRoom) {
+	socket.on("robberPlacement", function(robberInfo) {
+		catanServer.handleRobberPlacement(socket, currentRoom, robberInfo);
+	})
+}
 
 function handleHousePlacement(socket) {
 	socket.on("vertex", function(locationInfo) {

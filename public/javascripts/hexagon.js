@@ -1,31 +1,43 @@
 function Hexagon(index, resource) {
 
-    var index = index;
-    var resourceIndex = resource;
-    var diceNumber = -1;
+    this.index = index;
+    this.resourceIndex = resource;
+    this.diceNumber = -1;
+    this.vertices = [];
 
     this.getCircle = function() {
-    	return circle;
+    	return this.circle;
+    }
+
+    this.setCircle = function(circle) {
+        this.circle = circle
     }
 
     this.getIndex = function() {
-    	return index;
+    	return this.index;
     }
 
     this.getDiceNumber = function() {
-    	return diceNumber;
+    	return this.diceNumber;
     }
 
     this.setDiceNumber = function(kunalAndJesus) {
-    	diceNumber = kunalAndJesus;
+    	this.diceNumber = kunalAndJesus;
     }
 
     this.getResource = function() {
-    	return resourceIndex;
+    	return this.resourceIndex;
     }
 
-    this.isRobbered = function() {
-		return index == robberIndex;
-	}
+    this.addVertex =function(vertex) {
+        this.vertices.push(vertex);
+    }
+
+    this.getVertices = function() {
+        return this.vertices;
+    }
+ //    this.isRobbered = function(robberIndex) {
+	// 	return this.index == robberIndex;
+	// }
 
 }

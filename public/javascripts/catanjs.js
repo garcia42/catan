@@ -16,19 +16,9 @@ var hexagonColors = ["rgba(255,0,0,0.4)", "rgba(255,255,0,0.4)", "rgba(0,255,0,0
 var playerColors = ["red", "blue", "white", "green"];
 
 var vertices = []; // going to be added using the centers and calculations.
-
-var xAndY = [];  // to be used to add desert circle at end
-
 var hexagons = []; // used for giving hexagons to add diceNumber
-
-var centers = [];
-
-var noCircle = Math.floor(Math.random()*18);
-var order = [];
-
 var playerIndex = 0;
-
-console.log(socket);
+var playerTurn = 0;
 
 $(document).ready(function() {
 
@@ -36,7 +26,7 @@ $(document).ready(function() {
         playerIndex = serverData["playerIndex"];
         console.log("Drawing Board");
         loadHexagons(serverData["hexagons"]);
-        loadVertices(serverData["vertices"]);
+        // loadVertices(serverData["vertices"]);
         console.log("Adding Numbers to Circles");
         addNumbersToCircles(serverData["hexagons"]);
         changeNumberColors();
@@ -52,16 +42,17 @@ $(document).ready(function() {
 
     handleHousePlacement(socket);
     handleRoadEvent(socket);
+    handleRobberMovement(socket);
     // getDiceRoll();
 });
 
-function loadVertices(vertexServerData) {
-    for (var i = 0; i < vertexServerData.length; i++) {
-        if (vertexServerData[i]["id"] != 0) {
+// function loadVertices(vertexServerData) {
+//     for (var i = 0; i < vertexServerData.length; i++) {
+//         if (vertexServerData[i]["id"] != 0) {
 
-        }
-    }
-}
+//         }
+//     }
+// }
 
 function loadHexagons(hexagonServerData) {
     svgContainer.selectAll("*").remove();
@@ -97,8 +88,6 @@ function loadHexagons(hexagonServerData) {
               { "x": radius/2+xp, "y": -radius*h+yp}
             ];
 
-            centers.push([xp, yp]);
-
             var enterElements = 
                 svgContainer.append("path")
                             .attr("d", drawHexagon(hexagonData))
@@ -107,35 +96,26 @@ function loadHexagons(hexagonServerData) {
                             .attr("stroke-width", 3)
                             .attr("fill", hexagonColors[hexagonServerData[count]['color']]);
 
-                hexagons.push(new Hexagon(count, hexagonServerData[count]['color']));
+            hexagons.push(new Hexagon(count, hexagonServerData[count]['color']));
 
             addVertex(xp, yp, h, radius, count);
 
-            if (hexagonServerData[count]['color'] != 5) {
-                var enterCircle = svgContainer.append('circle')
-                    .attr('type', "enterCircle")
-                    .attr('cx', xp) //centers[i][0])
-                    .attr('cy', yp) //centers[i][1])
-                    .attr('r', 25)
-                    .attr('fill', "rgba(255,248,220,0.8)");
+            var circleFill = hexagonServerData[count]["color"] == 5 ? "rgba(255,248,220,0)" : "rgba(255,248,220,0.8)";
+            var enterCircle = svgContainer.append('circle')
+                .attr('type', "enterCircle")
+                .attr('cx', xp)
+                .attr('cy', yp) 
+                .attr('r', 25)
+                .attr('fill', circleFill);
+            hexagons[count].setCircle(enterCircle[0][0]);
 
-                order.push(enterCircle[0][0]);
-            } else {
-                order.push(-1);
-
-                var enterCircle = svgContainer.append('circle')
-                    .attr('type', "enterCircle")
-                    .attr('cx', xp) //centers[i][0])
-                    .attr('cy', yp) //centers[i][1])
-                    .attr('r', 25)
-                    .attr('fill', "rgba(255,248,220,0)");
-
+            if (hexagonServerData[count]["color"] == 5) {
                 var robier = svgContainer.append('rect')
-                                .attr('x', xp - 25) //centers[i][0])
-                                .attr('y', yp -25) //centers[i][1])
-                                .attr('width', 50)
-                                .attr('height', 50)
-                                .attr('fill', "rgba(255,0,0,1)");
+                    .attr('x', xp - 25)
+                    .attr('y', yp -25)
+                    .attr('width', 50)
+                    .attr('height', 50)
+                    .attr('fill', "rgba(255,0,0,1)");
             }
             count++;
             hexagonsRemaining--;
@@ -178,24 +158,37 @@ function moveRobberToTheFront() {
 
 function addOnClickListenerToEnterCircles() {
     circles = svgContainer.selectAll("circle")[0];
-    for (i = 0; i < circles.length; i++) {
-        if (circles[i].attributes.type.value == "enterCircle") {
-            circles[i].addEventListener("click", function(texy) {
-                    var i = texy;
-                    var robby = svgContainer.selectAll("rect")[0][0];
-                    robberIndex = order.indexOf(i.target);
-                    for (j = 0; j < vertices.length; j++) {
-
-                        var hexagons = vertices[j].getHexagons();
-                        if (hexagons.indexOf(robberIndex)) {
-
+    for (var i = 0; i < circles.length; i++) {
+        (function() {
+            if (circles[i].attributes.type.value == "enterCircle") {
+                circles[i].addEventListener("click", function(texy) {
+                    var robberHexagon = -1;
+                    for (var hexIndex = 0; hexIndex < window.hexagons.length; hexIndex++) {
+                        if (window.hexagons[hexIndex].getCircle() == this) {
+                            robberHexagon = hexIndex;
+                            break;
                         }
                     }
+
+                    var i = texy;
+                    var robby = svgContainer.selectAll("rect")[0][0];
                     robby.setAttribute("x", i.target.attributes.cx.value - 25);
                     robby.setAttribute("y", i.target.attributes.cy.value - 25);
+
+                    socket.emit("robberPlacement", {"hexIndex": robberHexagon, "playerIndex": window.playerIndex});
                 }, false);
-        }
+            }
+        }());
     }
+}
+
+function handleRobberMovement(socket) {
+    socket.on("robberPlacement", function(robberInfo) {
+        var robby = svgContainer.selectAll("rect")[0][0];
+        var hexCircle = hexagons[robberInfo["hexIndex"]].getCircle();
+        robby.setAttribute("x", hexCircle.attributes.cx.value - 25);
+        robby.setAttribute("y", hexCircle.attributes.cy.value - 25);
+    });
 }
 
 function addVertexNeighbors() {
@@ -304,17 +297,19 @@ function getDiceRoll() {
 
 function addVertex(xp, yp, h, radius, count) {
     for (i = 0; i < 6; i++) {
-        vertex = new Vertex(xp, yp, h, radius, i);
-        add = true;
+        var vertex = new Vertex(xp, yp, h, radius, i);
+        var add = true;
         vertex.addHexagon(count);
         for (j = 0; j < vertices.length; j++) {
             if (vertices[j].isEqual(vertex)) {
                 add = false;
                 vertices[j].addHexagon(count);
+                hexagons[count].addVertex(vertices[j]);
                 break;
             }
         }
         if (add) {
+            hexagons[count].addVertex(vertex);
             vertex.setId(vertices.length);
             vertices.push(vertex);
         }
@@ -322,8 +317,8 @@ function addVertex(xp, yp, h, radius, count) {
 }
 
 function addVertexCircles() {
-    vertexes = [];
-    for (i = 0; i < vertices.length; i++) {
+    var vertexes = [];
+    for (var i = 0; i < vertices.length; i++) {
         var enterCircle = svgContainer.append('circle')
                                     .attr('type', "vertexcircle")
                                 .attr('cx', vertices[i].getX()) //centers[i][0])
@@ -393,12 +388,7 @@ function handleHousePlacement(socket) {
 //Set hexagon javascript object number
 function addNumbersToHexagons() {
     var texts = svgContainer.selectAll("text")[0];
-    var realHexagonIndex = 0;
-    for (i = 0; i < texts.length; i++, realHexagonIndex++) {
-        if (i == noCircle) {        // make sure on correct hexagon, can skip the no text hexagon
-            realHexagonIndex++;
-        }
-
+    for (var i = 0; i < texts.length; i++) {
         var hexNumber = texts[i].textContent;
         hexagons[i].setDiceNumber(parseInt(hexNumber));
     }

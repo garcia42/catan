@@ -41,3 +41,11 @@ a {
 #room-list div:hover {
 	background-color: #ddd;
 }
+
+#dice {
+    float:left;
+}
+
+#end-turn {
+    overflow-x:hidden;
+}
