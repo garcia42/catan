@@ -1,24 +1,31 @@
-var maps = {}; //channel name to map?
-var playerData = {};
+var hexagonData = {}; //Channel name to list
+var vertexData = {};
+var roadData = {};
+var playerData = {}; //socket id to playerNumber
 
 exports.handleBoardCreation = function createBoard(socket, currentRoom) {
 	var hexagons;
-	if (maps[currentRoom[socket.id]] != null) {
-		hexagons = maps[currentRoom[socket.id]];
+	var vertices;
+	var roads;
+	if (hexagonData[currentRoom[socket.id]] != null) {
+		hexagons = hexagonData[currentRoom[socket.id]];
+		vertices = vertexData[currentRoom[socket.id]];
+		roads = roadData[currentRoom[socket.id]];
 	} else {
-		hexagons = createHexagons(); //Number, color
-		maps[currentRoom[socket.id]] = hexagons;
+		vertexData[currentRoom[socket.id]] = createVertices();
+		hexagonData[currentRoom[socket.id]] = createHexagons();
+		roadData[currentRoom[socket.id]] = createRoads();
 	}
+	playerData[socket.id] = Object.keys(currentRoom).length - 1;
 	console.log("Emitting Hexagons to Client ", socket.id);
-	console.log(maps);
-	socket.emit('newBoard', hexagons);
+	socket.emit('newBoard', {"playerIndex": playerData[socket.id], "hexagons": hexagons, "vertices": vertices});
 	return hexagons;
 }
 
 function createHexagons() {
 	var colorCounts = [0, 0, 0, 0, 0];
 	var numberCount = createNumberPool(); // i.e  -    The numbers 0 - 12, in their total numbers on the board
-	var hexagons = []; // going to be added using the centers and calculations.
+	var hexagons = []; // going to sbe added using the centers and calculations.
 
 	var robber = Math.floor(Math.random()*18);
 	var color;
@@ -37,6 +44,23 @@ function createHexagons() {
         hexagons.push({"color": color, "number": number});
 	}
 	return hexagons;
+}
+
+function createVertices() {
+	var vertices = [];
+	for (var i = 0; i < 54; i++) {
+		vertices.push({"id": 0, "houseType": 0});
+	}
+	return vertices;
+}
+
+//Id is the socket id of the owner? or the player
+function createRoads() {
+	var roads = [];
+	for (var i = 0; i < 72; i++) {
+		roads.push({"id": 0});
+	}
+	return roads;
 }
 
 function createNumberPool() {
@@ -74,24 +98,25 @@ function getRandomColorNumber(colorCount) {
     }
 }
 
+exports.handleHousePlacement = function(socket, currentRoom, locationInfo) {
+	console.log("Location Info ", locationInfo);
+	var vertexId = locationInfo["id"];
 
+	var specificVertex = vertexData[currentRoom[socket.id]][vertexId];
+	specificVertex["id"] = playerData[socket.id];
+	specificVertex["houseType"] = locationInfo["houseType"];
 
-// function processLocationEvent(socket, locationInfo) {
-// 	var user = locationInfo.user;
-// 	var vertex = locationInfo.vertex;
-// 	var houseType = locationInfo.houseType;
+	locationInfo["playerIndex"] = playerData[socket.id];
+	socket.broadcast.to(currentRoom[socket.id]).emit('vertex', locationInfo);
+}
 
-// 	mapVertices = maps[locationInfo.room][vertices];
-// 	mapVertices[vertex].setFilled(user);
-
-// 	if (houseType == "settlement") {
-// 		playerData[user].incrementSettlement();
-// 	} else {
-// 		playerData[user].incrementCity();
-// 	}
-
-// 	socket.broadcast.to(locationInfo.room).emit('location', locationInfo);
-// }
+exports.handleRoadPlacement = function(socket, currentRoom, roadInfo) {
+	console.log("Road Info ", roadInfo);
+	var roadId = roadInfo["id"];
+	roadData[currentRoom[socket.id]][roadId] = playerData[socket.id];
+	roadInfo["playerIndex"] = playerData[socket.id];
+	socket.broadcast.to(currentRoom[socket.id]).emit("road", roadInfo);
+}
 
 // function processVictoryCard() {
 

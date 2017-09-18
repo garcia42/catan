@@ -12,7 +12,8 @@ var svgContainer =
 
 //rsc = {CLAY:0,WHEAT:1,SHEEP:2,WOOD:3,ORE:4,DESERT:5}
 //red, yellow, light-green, green, grey, tan
-var colors = ["rgba(255,0,0,0.4)", "rgba(255,255,0,0.4)", "rgba(0,255,0,0.4)", "rgba(0,102,0,0.4)", "rgba(96,96,96,0.4)", "rgba(255,255,204,0.4)"];
+var hexagonColors = ["rgba(255,0,0,0.4)", "rgba(255,255,0,0.4)", "rgba(0,255,0,0.4)", "rgba(0,102,0,0.4)", "rgba(96,96,96,0.4)", "rgba(255,255,204,0.4)"];
+var playerColors = ["red", "blue", "white", "green"];
 
 var vertices = []; // going to be added using the centers and calculations.
 
@@ -25,16 +26,19 @@ var centers = [];
 var noCircle = Math.floor(Math.random()*18);
 var order = [];
 
+var playerIndex = 0;
+
 console.log(socket);
 
 $(document).ready(function() {
 
-    socket.on('newBoard', function(hexagonServerData) {
+    socket.on('newBoard', function(serverData) {
+        playerIndex = serverData["playerIndex"];
         console.log("Drawing Board");
-        // createHexagonBoard(hexagonServerData);
-        drawBoard(hexagonServerData);
+        loadHexagons(serverData["hexagons"]);
+        loadVertices(serverData["vertices"]);
         console.log("Adding Numbers to Circles");
-        addNumbersToCircles(hexagonServerData);
+        addNumbersToCircles(serverData["hexagons"]);
         changeNumberColors();
         addNumbersToHexagons();
         vertexCircles = addVertexCircles();
@@ -43,15 +47,23 @@ $(document).ready(function() {
         moveRobberToTheFront();
         addVertexNeighbors();
         addRoadsBetweenNeighbors();
-        getDiceRoll();
         addOnClickListenerToEnterCircles();  // supposed to be center circle
     });
 
-    console.log("Ready to Receive Board ", socket.id);
-    socket.emit("receiveBoard", true);
+    handleHousePlacement(socket);
+    handleRoadEvent(socket);
+    // getDiceRoll();
 });
 
-function drawBoard(hexagonServerData) {
+function loadVertices(vertexServerData) {
+    for (var i = 0; i < vertexServerData.length; i++) {
+        if (vertexServerData[i]["id"] != 0) {
+
+        }
+    }
+}
+
+function loadHexagons(hexagonServerData) {
     svgContainer.selectAll("*").remove();
 
     var hexagonsRemaining = 3;
@@ -90,10 +102,10 @@ function drawBoard(hexagonServerData) {
             var enterElements = 
                 svgContainer.append("path")
                             .attr("d", drawHexagon(hexagonData))
-                            .attr("stroke", "red")
+                            .attr("stroke", "black")
                             .attr("stroke-line","20,5")
                             .attr("stroke-width", 3)
-                            .attr("fill", colors[hexagonServerData[ count]['color']]);
+                            .attr("fill", hexagonColors[hexagonServerData[count]['color']]);
 
                 hexagons.push(new Hexagon(count, hexagonServerData[count]['color']));
 
@@ -222,7 +234,7 @@ function addRoadsBetweenNeighbors() {
     }
 
     // Draw the lines
-    roadObjects = []
+    var roadObjects = []
     for (i = 0; i < roads.length; i++) {
         roads[i].getYList()[0]
         var line = svgContainer.append("line")
@@ -232,15 +244,29 @@ function addRoadsBetweenNeighbors() {
                             .attr("y2", roads[i].getYList()[1])
                             .attr("stroke-width", 4)
                             .attr("stroke", "transparent");
-        roadObjects.push(line)
+        roads[i].setLine(line[0][0]);
+        roadObjects.push(line);
     }
 
     for (i = 0; i < roadObjects.length; i++) {
-        var road = roadObjects[i][0][0];
-        road.addEventListener("click", function(road) {
-            var i = road;
-            i.target.attributes.stroke.value = "black"}, false);
+        (function() {
+            var roadId = i;
+            var road = roadObjects[i][0][0];
+            road.addEventListener("click", 
+                function(road) {
+                    var i = road;
+                    i.target.attributes.stroke.value = playerColors[playerIndex];
+                    socket.emit("road", {"id": roadId});
+                },
+                false);
+        }());
     }
+}
+
+function handleRoadEvent(socket) {
+    socket.on("road", function(roadInfo) {
+        window.roads[roadInfo["id"]].getLine().attributes.stroke.value = playerColors[roadInfo["playerIndex"]];
+    });
 }
 
 function generatePossibleNeighbors(vertex) {
@@ -289,6 +315,7 @@ function addVertex(xp, yp, h, radius, count) {
             }
         }
         if (add) {
+            vertex.setId(vertices.length);
             vertices.push(vertex);
         }
     }
@@ -342,13 +369,25 @@ function addNumbersToCircles(hexagonServerData) {
 }
 
 function addOnClickListenerToVertices(vertexCircles) {
-    for (i = 0; i < vertexCircles.length; i++) {
-        var circle = vertexCircles[i][0][0];
-        circle.addEventListener("click", function(circle) {
-            var i = circle;
-            i.target.attributes.fill.value = "yellow"}, false);
-            // socket.emit("vertex", {"":}) (TODO) vertex emit
+    for (var i = 0; i < vertices.length; i++) {
+        (function () {
+            var circle = vertices[i].getCircle();
+            var vertex = vertices[i];
+            circle.addEventListener("click", function() {
+                this.attributes.fill.value = window.playerColors[window.playerIndex];
+                vertex.upgradeHouse();
+                var locationInfo = {"id": vertex.getId(), "houseType": vertex.getHouseType()};
+                socket.emit("vertex", locationInfo);
+            }, false);
+        }());
     }
+}
+
+function handleHousePlacement(socket) {
+    socket.on("vertex", function(locationInfo) {
+        window.vertices[locationInfo["id"]].getCircle().attributes.fill.value = playerColors[locationInfo["playerIndex"]];
+        window.vertices[locationInfo["id"]].upgradeHouse();
+    });
 }
 
 //Set hexagon javascript object number

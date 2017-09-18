@@ -4,6 +4,8 @@ function Vertex(xp, yp, h, radius, index) {
 	this.diceNumbers = [];
 	this.neighbors = [];
 	this.roads = {};
+	this.player = -1;
+	this.houseType = 0;
 
 	var downShift = 20 * scale;
 	var upDown = 8 * scale;
@@ -124,5 +126,20 @@ function Vertex(xp, yp, h, radius, index) {
 
 	this.getNumberOfRoadsOfColor = function(color, roadsDict) {
 		return this.getRoadsOfColor(color, roadsDict).length;
+	}
+
+	this.setHouseType = function(houseType) {
+		this.houseType = houseType;
+	}
+
+	this.getHouseType = function() {
+		return this.houseType;
+	}
+
+	this.upgradeHouse = function() {
+		this.houseType += 1;
+		if (this.houseType > 2) {
+			console.log("Error: Housetype of vertex greater than 2, vertexId: " + this.getId());
+		}
 	}
 }

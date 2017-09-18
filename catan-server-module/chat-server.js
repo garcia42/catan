@@ -27,9 +27,21 @@ exports.onConnection = function(socket, fieldio) {
 	handleUserDisconnection(socket, nickNames, namesUsed);
 	// socket.leave(socket.id); //Added this because sockets join a room of their own socket id.
 	catanServer.handleBoardCreation(socket, currentRoom);
+	handleHousePlacement(socket, currentRoom);
+	handleRoadPlacement(socket, currentRoom);
 };
 
-exports.guestNumber = guestNumber;
+function handleHousePlacement(socket) {
+	socket.on("vertex", function(locationInfo) {
+		catanServer.handleHousePlacement(socket, currentRoom, locationInfo);
+	});
+}
+
+function handleRoadPlacement(socket) {
+	socket.on("road", function(roadInfo) {
+		catanServer.handleRoadPlacement(socket, currentRoom, roadInfo);
+	});
+}
 
 function assignGuestName(socket, guestNumber, nickNames, namesUsed) {
 	socket.guestNumber = guestNumber;
@@ -105,8 +117,10 @@ function handleRoomJoining(socket) {
 
 function handleUserDisconnection(socket) {
 	socket.on('disconnect', function() {
+		console.log("Disconnecting ", socket.id)
 		var nameIndex = namesUsed.indexOf(nickNames[socket.id]);
 		delete namesUsed[nameIndex];
 		delete nickNames[socket.id];
+		delete currentRoom[socket.id];
 	});
 }
