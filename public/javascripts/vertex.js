@@ -1,4 +1,4 @@
-function Vertex(xp, yp, h, radius, index) {
+function Vertex(xp, yp, radius, index) {
 
 	this.hexagons = [];
 	this.diceNumbers = [];
@@ -10,7 +10,6 @@ function Vertex(xp, yp, h, radius, index) {
 	var downShift = 20 * scale;
 	var upDown = 8 * scale;
 	var radius = radius;
-	var h = h;
 
 	if (index == -1) {
 		this.x = xp;
@@ -44,7 +43,7 @@ function Vertex(xp, yp, h, radius, index) {
    	};
 
     this.isEqual = function(vertex) {
-    	return this.x === vertex.getX() && this.y === vertex.getY();
+    	return this.x == vertex.getX() && this.y == vertex.getY();
     }
 
     this.addHexagon = function(hex) {
@@ -75,13 +74,13 @@ function Vertex(xp, yp, h, radius, index) {
 	    var p = [];
 	    var x = this.getX();
 	    var y = this.getY();
-	    p.push(new Vertex(x, y + 60, h, radius, -1));
-	    p.push(new Vertex(x, y - 60, h, radius, -1));   // up and down
+	    p.push(new Vertex(x, y + 60, radius, -1));
+	    p.push(new Vertex(x, y - 60, radius, -1));   // up and down
 
-	    p.push(new Vertex(x - radius, y - 28, h, radius, -1));    // left up diagonal
-	    p.push(new Vertex(x - radius, y + 28, h, radius, -1));   // left down diagonal
-	    p.push(new Vertex(x + radius, y - 28, h, radius, -1));   // right up diagonal
-	    p.push(new Vertex(x + radius, y + 28, h, radius, -1));   // right down diagonal
+	    p.push(new Vertex(x - radius, y - 28, radius, -1));    // left up diagonal
+	    p.push(new Vertex(x - radius, y + 28, radius, -1));   // left down diagonal
+	    p.push(new Vertex(x + radius, y - 28, radius, -1));   // right up diagonal
+	    p.push(new Vertex(x + radius, y + 28, radius, -1));   // right down diagonal
 
 	    return p;
 	}

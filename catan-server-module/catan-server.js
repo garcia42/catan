@@ -15,7 +15,10 @@ exports.handleBoardCreation = function createBoard(socket, currentRoom) {
 		roads = roadData[currentRoom[socket.id]];
 	} else {
 		vertexData[currentRoom[socket.id]] = createVertices();
-		hexagonData[currentRoom[socket.id]] = createHexagons();
+		hexagonData[currentRoom[socket.id]] = createHexagonData();
+		var hexagons = createHexagonObjects(hexagonData[currentRoom[socket.id]]);
+		var vertices = createVertexObjects(hexagons);
+		var roads = createRoadObjects(vertices);
 		roadData[currentRoom[socket.id]] = createRoads();
 	}
 	playerData[socket.id] = Object.keys(currentRoom).length - 1;
@@ -24,7 +27,7 @@ exports.handleBoardCreation = function createBoard(socket, currentRoom) {
 	return hexagons;
 }
 
-function createHexagons() {
+function createHexagonData() {
 	var colorCounts = [0, 0, 0, 0, 0];
 	var numberCount = createNumberPool(); // i.e  -    The numbers 0 - 12, in their total numbers on the board
 	var hexagons = []; // going to sbe added using the centers and calculations.
@@ -46,6 +49,98 @@ function createHexagons() {
         hexagons.push({"color": color, "number": number});
 	}
 	return hexagons;
+}
+
+function createHexagonObjects(hexagonServerData) {
+    var radius = 50 * scale;
+    var xp = 190;
+    var yp = 110;
+    var size = 5;
+    var hexagons = [];
+
+    //Calculate the center positions of each hexagon 
+    var points = [];
+    var count = 0;
+    for (var i = Math.floor(size/2); i < size; i++) {
+        for (var j = 0; j < size - count ; j++) {
+            var x = xp + radius * j * 1.75 + (radius * count);
+            var y = yp + radius * i * 1.5;
+            points.push([x, y]); //Do self, then if not center, do mirrored row above
+            hexagons.push(new Hexagon(hexagons.length, hexagonServerData[hexagons.length]['color'], hexagonServerData[hexagons.length]['number']));
+
+            if (i > Math.floor(size/2)) {
+                var yMirror = yp + (radius * 1.5) * (Math.floor(size/2) - count);
+                points.push([x, yMirror]);
+                hexagons.push(new Hexagon(hexagons.length, hexagonServerData[hexagons.length]['color'], hexagonServerData[hexagons.length]['number']));
+            }
+        }//for j
+        count += 1;
+    }//for i
+
+
+
+    return [hexagons];
+}
+
+function createVertexObjects() {
+	var vertices = [];
+	//Set the hexagon radius
+    var hexbin = d3.hexbin()
+                .radius(radius);
+
+    //x and y in this represent the actual centers of this hexagon
+    var hexPoints = hexbin(points);
+    console.log(hexbin(points));
+    var corners = hexagon(radius);
+    hexPoints.forEach(function(hexCenter, i) {
+        for (var j = 0; j < 6; j++) {
+            var x = hexCenter.x + corners[j+1][0];
+            var y = hexCenter.y + corners[j+1][1];
+            addVertex(vertices, hexagons, parseFloat(x.toFixed(0)), parseFloat(y.toFixed(0)), radius, i);
+        }
+    });
+    addVertexNeighbors(vertices);
+    return vertices;
+}
+
+function createRoadObjects(vertices) {
+    var roads = [];
+    for (i = 0; i < vertices.length; i++) {
+        var x = vertices[i].getX();
+        var y = vertices[i].getY();
+        for (j = 0; j < vertices[i].getNeighbors().length; j++) {
+            var x2 = vertices[i].getNeighbors()[j].getX();
+            var y2 = vertices[i].getNeighbors()[j].getY();
+            var road = new Road(x, y, x2, y2);
+            var add = true;
+            for (k = 0; k < roads.length; k++) {
+                if (roads[k].isEqual(road)) {
+                    add = false;
+                    break;
+                }
+            }
+            if (add) {
+                roads.push(road);
+            }
+        }
+    }
+    return roads;
+}
+
+function addVertexNeighbors(vertices, radius) {
+
+    var corners = hexagon(radius);
+    vertices.forEach(function(vertex) {
+        for (var i = 1; i < corners.length; i++) {
+            var neighborX = (vertex.getX() + corners[i][0]);
+            var neighborY = (vertex.getY() + corners[i][1]);
+            vertices.forEach(function(neighborVertex) {
+                if (Math.abs(neighborVertex.getX() - neighborX) < 1 && Math.abs(neighborVertex.getY() - neighborY) < 1) {
+                    vertex.addNeighbor(neighborVertex);
+                }
+            });
+        }
+    });
 }
 
 function createVertices() {
@@ -100,6 +195,30 @@ function getRandomColorNumber(colorCount) {
     }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 exports.handleHousePlacement = function(socket, currentRoom, locationInfo) {
 	console.log("Location Info ", locationInfo);
 	var vertexId = locationInfo["id"];
@@ -124,6 +243,35 @@ exports.handleRobberPlacement = function(socket, currentRoom, robberInfo) {
 	console.log("Robber Movement", robberInfo);
 	robberData[currentRoom[socket.id]] = robberInfo["hexIndex"];
 	socket.broadcast.to(currentRoom[socket.id]).emit("robberPlacement", robberInfo);
+}
+
+exports.handleBeginTurn = function(socket, currentRoom, turnInfo) {
+	//Ask if player to go wants to activate card
+	//Roll dice
+		//Potentially move robber
+	//Distribute cards
+
+	dice = getDiceRoll();
+	socket.broadcast.to(currentRoom[socket.id]).emit("roll", dice);
+	if (dice[0] + dice[1] == 7) {
+		robberEvent(socket);
+	} else {
+		distributeCards(socket, dice);
+	}
+}
+
+function robberEvent(socket) {
+
+}
+
+function distributeCards(socket, dice) {
+
+}
+
+function getDiceRoll() {
+    var one = Math.floor(Math.random()*6) + 1;
+    var two = Math.floor(Math.random()*6) + 1;
+    return [one, two];
 }
 
 // function processVictoryCard() {

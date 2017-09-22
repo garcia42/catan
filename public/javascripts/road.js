@@ -7,11 +7,15 @@ function Road(xO, yO, xT, yT, id) {
 	this.endPoints = []; //Vertices at ends of this road
 
 	this.isEqual = function(road) { //TODO Change this to see if there is a road between the same two endpoints
-		xL2 = road.getXList();
-		yL2 = road.getYList();
-		xEqual = (xL2[0] == this.x2 || xL2[1] == this.x2) && (xL2[0] == this.x1 || xL2[1] == this.x1)
-		yEqual = (yL2[0] == this.y2 || yL2[1] == this.y2) && (yL2[0] == this.y1 || yL2[1] == this.y1)
+		var xL2 = road.getXList();
+		var yL2 = road.getYList();
+		var xEqual = (inDelta(xL2[0], this.x2) || inDelta(xL2[1], this.x2)) && (inDelta(xL2[0], this.x1) || inDelta(xL2[1], this.x1));
+		var yEqual = (inDelta(yL2[0], this.y2) || inDelta(yL2[0], this.y2)) && (inDelta(yL2[0], this.y1) || inDelta(yL2[1], this.y1));
 		return xEqual && yEqual;
+	}
+
+	function inDelta(x, y) {
+		return Math.abs(x - y) < 1;
 	}
 
 	this.getXList = function() {

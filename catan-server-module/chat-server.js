@@ -30,7 +30,15 @@ exports.onConnection = function(socket, fieldio) {
 	handleHousePlacement(socket, currentRoom);
 	handleRoadPlacement(socket, currentRoom);
 	handleRobberPlacement(socket, currentRoom);
+	handleBeginTurn(socket, currentRoom);
 };
+
+function handleBeginTurn(socket, currentRoom) {
+	socket.on("beginTurn", function(turnInfo) {
+		//TODO people can activate development cards before roll.
+		catanServer.handleBeginTurn(socket, currentRoom, turnInfo);
+	});
+}
 
 function handleRobberPlacement(socket, currentRoom) {
 	socket.on("robberPlacement", function(robberInfo) {

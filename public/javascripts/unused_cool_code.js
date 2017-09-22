@@ -43,3 +43,12 @@ function createHexagonBoard(hexagonServerData) {
             return colors[hexagonServerData[i]["color"]];
      });
 }
+/*
+
+Client:
+Hexagon Corner Locations
+Hexagon Edge Locations
+
+Need those corners and edges to match indices on server
+
+*/
