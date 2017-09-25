@@ -1,56 +1,67 @@
-function Road(xO, yO, xT, yT, id) {
-	this.x1 = xO;
-	this.y1 = yO;
-	this.x2 = xT;
-	this.y2 = yT;
-	this.id = id;
-	this.endPoints = []; //Vertices at ends of this road
+class Road {
 
-	this.isEqual = function(road) { //TODO Change this to see if there is a road between the same two endpoints
+	constructor(xO, yO, xT, yT, id) {
+		this.x1 = xO;
+		this.y1 = yO;
+		this.x2 = xT;
+		this.y2 = yT;
+		this.id = id;
+		this.endPoints = []; //Vertices at ends of this road
+	}
+
+	isEqual(road) { //TODO Change this to see if there is a road between the same two endpoints
 		var xL2 = road.getXList();
 		var yL2 = road.getYList();
-		var xEqual = (inDelta(xL2[0], this.x2) || inDelta(xL2[1], this.x2)) && (inDelta(xL2[0], this.x1) || inDelta(xL2[1], this.x1));
-		var yEqual = (inDelta(yL2[0], this.y2) || inDelta(yL2[0], this.y2)) && (inDelta(yL2[0], this.y1) || inDelta(yL2[1], this.y1));
+		var xEqual = (this.inDelta(xL2[0], this.x2) || this.inDelta(xL2[1], this.x2)) && (this.inDelta(xL2[0], this.x1) || this.inDelta(xL2[1], this.x1));
+		var yEqual = (this.inDelta(yL2[0], this.y2) || this.inDelta(yL2[0], this.y2)) && (this.inDelta(yL2[0], this.y1) || this.inDelta(yL2[1], this.y1));
 		return xEqual && yEqual;
 	}
 
-	function inDelta(x, y) {
+	getPlayerIndex() {
+		return this.playerIndex;
+	}
+
+	setPlayerIndex(playerIndex) {
+		this.playerIndex = playerIndex;
+	}
+
+	inDelta(x, y) {
 		return Math.abs(x - y) < 1;
 	}
 
-	this.getXList = function() {
+	getXList() {
 		return [this.x1, this.x2];
 	}
 
-	this.getYList = function() {
+	getYList() {
 		return [this.y1, this.y2];
 	}
 
-	this.isShowing = function() {
+	isShowing() {
 		return this.getColor() != "transparent";
 	}
 
-	this.getColor = function() {
+	getColor() {
 		return this.line.attributes.stroke.value;
 	}
 
-	this.setLine = function(line) {
+	setLine(line) {
 		this.line = line;
 	}
 
-	this.addEndpoint = function(vertex) {
+	addEndpoint(vertex) {
 		this.endPoints.push(vertex);
 	}
 
-	this.getEndpoints = function() {
+	getEndpoints() {
 		return this.endPoints;
 	}
 
-	this.getLine = function() {
+	getLine() {
 		return this.line;
 	}
 
-	this.getNeighbors = function(verticesDict) {
+	getNeighbors(verticesDict) {
 		var neighbors = [];
 		var i;
 		var key;
@@ -66,7 +77,7 @@ function Road(xO, yO, xT, yT, id) {
 		return neighbors;
 	}
 
-	this.getNeighborsOfSameColor = function(roadsD, verticesDict) {
+	getNeighborsOfSameColor(roadsD, verticesDict) {
 		var sameColorNeighbors = [];
 		for (neighbor in this.getNeighbors(verticesDict)) {
 			if (this.getColor() == roadsD[this.getNeighbors(verticesDict)[neighbor]].getColor()) {
@@ -77,7 +88,7 @@ function Road(xO, yO, xT, yT, id) {
 	}
 
 	//In the case of a circle of roads, return the road with the least connected same color roads
-	this.getEndsOfRoadSameColor = function(roadsD, verticesDict) {
+	getEndsOfRoadSameColor(roadsD, verticesDict) {
 		var queue = [this.getId()];
 		var visited = [this.getId()];
 		var curLowestRoad;
@@ -108,7 +119,7 @@ function Road(xO, yO, xT, yT, id) {
 		return endRoads;
 	}
 
-	this.isInList = function(roadList) {
+	isInList(roadList) {
 		var i;
 		for (i = 0; i < roadList.length; i++) {
 			if (this.isEqual(roadList[i])) {
@@ -118,16 +129,16 @@ function Road(xO, yO, xT, yT, id) {
 		return false;
 	}
 
-	this.getId = function() {
+	getId() {
 		return this.id;
 	}
 
-	this.setId = function(id) {
+	setId(id) {
 		this.id = id;
 	}
 
 	//Find Vertex that has only 1 road of the same color as this one, could be both or neither
-	this.getEndVertex = function(roadsDict, verticesDict) {
+	getEndVertex(roadsDict, verticesDict) {
 		var endpoint;
 		for (endpoint in this.getEndpoints(verticesDict)) {
 			var vertexIndex = this.getEndpoints()[endpoint];
@@ -138,3 +149,5 @@ function Road(xO, yO, xT, yT, id) {
 		return -1;
 	}
 }
+
+module.exports = Road;
