@@ -8,16 +8,16 @@ class Vertex {
 		this.diceNumbers = [];
 		this.neighbors = [];
 		this.roads = {};
-		this.player = -1;
 		this.houseType = 0;
+		this.playerIndex = -1;
 	}
 
 	getPlayerIndex() {
 		return this.playerIndex;
 	}
 
-	setPlayerIndex(playerId) {
-		return this.playerIndex;
+	setPlayerIndex(playerIndex) {
+		this.playerIndex = playerIndex;
 	}
 
   	getX() {

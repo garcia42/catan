@@ -2,41 +2,84 @@ const Hexagon = require('./hexagon');
 const Vertex = require('./vertex');
 const d3 = require("d3");
 require('./hexbin');
-const Road = require('./road')
+const Road = require('./road');
+const PlayerCards = require('./playerCards');
 
 var hexagonData = {}; //Channel name to list
 var vertexData = {};
 var roadData = {};
-var playerData = {}; //socket id to playerNumber
+var playerIndexData = {}; //socket id to playerNumber
 var robberData = {};
 var playerTurn = {};
+var playerCardData = {};
+
+var scale = 1;
+var radius = 50;
+var indicesLeft = [0,1,2,3];
 
 exports.handleBoardCreation = function createBoard(socket, currentRoom) {
-	if (hexagonData[currentRoom[socket.id]] == null) {
-		hexagonData[currentRoom[socket.id]] = createHexagonObjects();
-		vertexData[currentRoom[socket.id]] = createVertexObjects(hexagonData[currentRoom[socket.id]]);
-		roadData[currentRoom[socket.id]] = createRoadObjects(vertexData[currentRoom[socket.id]]);
+	var radiusScaled = radius * scale;
+	if (hexagonData[currentRoom] == null) {
+		hexagonData[currentRoom] = createHexagonObjects(radiusScaled);
+		vertexData[currentRoom] = createVertexObjects(hexagonData[currentRoom], radiusScaled);
+		roadData[currentRoom] = createRoadObjects(vertexData[currentRoom]);
 	}
 
-
-	playerData[socket.id] = Object.keys(currentRoom).length - 1;
 	console.log("Emitting Hexagons to Client ", socket.id);
 	socket.emit('newBoard', 
 		{
-			"playerIndex": playerData[socket.id],
-		 	"hexagons": hexagonData[currentRoom[socket.id]],
-		  	"vertices": vertexData[currentRoom[socket.id]],
-		  	"roads": roadData[currentRoom[socket.id]]
+			"playerIndex": getPlayerIndex(socket, currentRoom),
+		 	"hexagons": hexagonData[currentRoom],
+		  	"vertices": vertexData[currentRoom],
+		  	"roads": roadData[currentRoom]
 		});
 	// return hexagons;
 }
 
+exports.handlePlayerJoin = function handlePlayerJoin(socket, currentRoom) {
+    assignPlayerIndex(socket, currentRoom);
+    createPlayerCardObject(socket, currentRoom);
+}
+
+function assignPlayerIndex(socket, currentRoom) {
+    if (playerIndexData[currentRoom] == null) {
+        playerIndexData[currentRoom] = {};
+    }
+    if (getPlayerIndex(socket, currentRoom) == null) {
+        setPlayerIndex(socket, currentRoom, Object.keys(playerIndexData[currentRoom]).length);
+    }
+}
+
+function createPlayerCardObject(socket, currentRoom) {
+    if (playerCardData[currentRoom] == null) {
+        playerCardData[currentRoom] = {};
+    }
+    if (getPlayerCardData(socket, currentRoom) == null) {
+        setPlayerCardData(socket, currentRoom, new PlayerCards(getPlayerIndex(socket, currentRoom)));
+    }
+}
+
+function getPlayerCardData(socket, currentRoom) {
+    return playerCardData[currentRoom][getPlayerIndex(socket, currentRoom)];
+}
+
+function getPlayerIndex(socket, currentRoom) {
+    return playerIndexData[currentRoom][socket.id];
+}
+
+function setPlayerIndex(socket, currentRoom, index) {
+    playerIndexData[currentRoom][socket.id] = index;
+}
+
+function setPlayerCardData(socket, currentRoom, playerCards) {
+    playerCardData[currentRoom][getPlayerIndex(socket, currentRoom)] = playerCards;
+}
+
 //Hexagon creation with color, number and center
 //Do rows, if row exists across y axis then create that in same loop
-function createHexagonObjects() {
-    var radius = 50;
-    var xp = 190;
-    var yp = 110;
+function createHexagonObjects(radius) {
+    var xp = 190 + 95;
+    var yp = 110 + 40;
     var size = 5;
     var hexagons = [];
     var colorCounts = [0, 0, 0, 0, 0];
@@ -69,8 +112,7 @@ function createHexagonObjects() {
     return hexagons;
 }
 
-function createVertexObjects(hexagons) {
-	var radius = 50;
+function createVertexObjects(hexagons, radius) {
 	var vertices = [];
 	//Set the hexagon radius
     var hexbin = d3.hexbin()
@@ -92,7 +134,7 @@ function createVertexObjects(hexagons) {
             addVertex(vertices, hexagons, x.toFixed(0), y.toFixed(0), radius, i);
         }
     });
-    addVertexNeighbors(vertices, 50);
+    addVertexNeighbors(vertices, radius);
     return vertices;
 }
 
@@ -154,14 +196,13 @@ function createRoadObjects(vertices) {
 }
 
 function addVertexNeighbors(vertices, radius) {
-	console.log("BEGIN ADD NEIGHBOR");
     var corners = hexagon(radius);
     vertices.forEach(function(vertex) {
         for (var i = 1; i < corners.length; i++) {
             var neighborX = parseFloat(vertex.getX()) + corners[i][0];
             var neighborY = parseFloat(vertex.getY()) + corners[i][1];
             vertices.forEach(function(neighborVertex) {
-                if (Math.abs(neighborVertex.getX() - neighborX) < 1 && Math.abs(neighborVertex.getY() - neighborY) < 1) {
+                if (Math.abs(neighborVertex.getX() - neighborX) <= 1 && Math.abs(neighborVertex.getY() - neighborY) <= 1) {
                     vertex.addNeighbor(neighborVertex.getId());
                 }
             });
@@ -236,52 +277,67 @@ function getRandomColorNumber(colorCount, hexagonIndex, robberIndex) {
 
 exports.handleHousePlacement = function(socket, currentRoom, locationInfo) {
 	var vertexId = locationInfo["id"];
-
-	var specificVertex = vertexData[currentRoom[socket.id]][vertexId];
-	specificVertex.setPlayerIndex(playerData[socket.id]);
+	var specificVertex = vertexData[currentRoom][vertexId];
+    var playerIndex = getPlayerIndex(socket, currentRoom);
+	specificVertex.setPlayerIndex(playerIndex);
 	specificVertex.upgradeHouse();
 
-	locationInfo["playerIndex"] = playerData[socket.id];
+	locationInfo["playerIndex"] = playerIndex;
 	console.log("Location Info ", locationInfo);
-	socket.broadcast.to(currentRoom[socket.id]).emit('vertex', locationInfo);
+	socket.broadcast.to(currentRoom).emit('vertex', locationInfo);
 }
 
 exports.handleRoadPlacement = function(socket, currentRoom, roadInfo) {
+    var playerIndex = getPlayerIndex(socket, currentRoom);
 	var roadId = roadInfo["id"];
-	roadData[currentRoom[socket.id]][roadId].setPlayerIndex(playerData[socket.id]);
-	roadInfo["playerIndex"] = playerData[socket.id];
+	roadData[currentRoom][roadId].setPlayerIndex(playerIndex);
+	roadInfo["playerIndex"] = playerIndex;
 	console.log("Road Info ", roadInfo);
-	socket.broadcast.to(currentRoom[socket.id]).emit("road", roadInfo);
+	socket.broadcast.to(currentRoom).emit("road", roadInfo);
 }
 
 exports.handleRobberPlacement = function(socket, currentRoom, robberInfo) {
 	console.log("Robber Movement", robberInfo);
-	robberData[currentRoom[socket.id]] = robberInfo["hexIndex"];
-	// robberInfo["playerIndex"] = playerData[socket.id];
-	socket.broadcast.to(currentRoom[socket.id]).emit("robberPlacement", robberInfo);
+	robberData[currentRoom] = robberInfo["hexIndex"];
+	// robberInfo["playerIndex"] = playerIndexData[socket.id];
+	socket.broadcast.to(currentRoom).emit("robberPlacement", robberInfo);
 }
 
-exports.handleBeginTurn = function(socket, currentRoom, turnInfo) {
+exports.handleBeginTurn = function(io, socket, currentRoom, turnInfo) {
 	//Ask if player to go wants to activate card
 	//Roll dice
 		//Potentially move robber
 	//Distribute cards
-
+	console.log("Handle Begin Turn");
 	dice = getDiceRoll();
-	socket.broadcast.to(currentRoom[socket.id]).emit("roll", dice);
+	io.sockets.in(currentRoom).emit('dice', dice);
 	if (dice[0] + dice[1] == 7) {
-		robberEvent(socket);
+		console.log("ROBBER!!!");
+		robberEvent(io, socket);
 	} else {
-		distributeCards(socket, dice);
+		distributeCards(io, socket, dice[0] + dice[1], currentRoom);
 	}
 }
 
-function robberEvent(socket) {
+function robberEvent(io, socket) {
 
 }
 
-function distributeCards(socket, dice) {
-
+function distributeCards(io, socket, dice, currentRoom) {
+	//Emit to whole room the new cards that people have
+    var hexagons = hexagonData[currentRoom];
+    var vertices = vertexData[currentRoom];
+    hexagons.forEach(function(hexagon, i) {
+        if (hexagon.getDiceNumber() == dice) {
+            hexagon.getVertices().forEach(function(vertexIndex) {
+                var vertex = vertices[vertexIndex];
+                if (vertex.getPlayerIndex(socket, currentRoom) != -1) { //Add cards to player card data
+                    playerCardData[currentRoom][vertex.getPlayerIndex()].addResourceAmount(hexagon.getResource(), vertex.getHouseType());
+                }
+            });
+        }
+    });
+    io.sockets.in(currentRoom).emit('cards', playerCardData[currentRoom]);
 }
 
 function getDiceRoll() {
@@ -289,14 +345,3 @@ function getDiceRoll() {
     var two = Math.floor(Math.random()*6) + 1;
     return [one, two];
 }
-
-// function processVictoryCard() {
-
-// }
-
-// function drawCard(socket) {
-// 	socket.on('draw', function(drawInformation) {
-// 		incrementPlayerHand();
-// 		decrementCardCount();
-// 	})
-// }

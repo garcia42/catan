@@ -43,7 +43,6 @@ $(document).ready(function() {
 	});
 
 	socket.on('joinResult', function(result) {
-		console.log(result);
 		$('#room').text(result["room"]);
 		$('#messages').append(divSystemContentElement('Room Changed.'));
 	});
@@ -71,8 +70,6 @@ $(document).ready(function() {
 	setInterval(function() {
 		socket.emit('rooms');
 	}, 1000);
-
-	$('#send-message').focus();
 
 	$('#send-form').submit(function() {
 		processUserInput(chatApp, socket);

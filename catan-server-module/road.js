@@ -26,7 +26,7 @@ class Road {
 	}
 
 	inDelta(x, y) {
-		return Math.abs(x - y) < 1;
+		return Math.abs(x - y) <= 1;
 	}
 
 	getXList() {

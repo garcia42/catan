@@ -4,17 +4,13 @@ var nickNames = {};
 var namesUsed = [];
 var guestNumber = 1;
 var currentRoom = {};
-
-// Questions
-// 1) How does currentRoom work? Feels like it should be different for diff users
-// 2) How does emit 'message' and then broadcasting 'message' work?
-// 3) Are socket.join and socket.leave helper functions?
-// 4) what is io.sockets.manager.rooms?
+var uuids = {}; //Nickname to UUID
+var disconnecting = []; //List of nickNames that are disconnecting
 
 exports.onConnection = function(socket, fieldio) {
 	io = fieldio;
-	guestNumber = assignGuestName(socket, guestNumber, nickNames, namesUsed);
-	joinRoom(socket, 'Lobby');
+
+	handleRegister(socket, nickNames, guestNumber, namesUsed); //Join room, or set to old socket if returning user
 
 	handleMessageBroadcast(socket, nickNames);
 	handleNameChangeAttempts(socket, nickNames, namesUsed);
@@ -26,35 +22,79 @@ exports.onConnection = function(socket, fieldio) {
 
 	handleUserDisconnection(socket, nickNames, namesUsed);
 	// socket.leave(socket.id); //Added this because sockets join a room of their own socket id.
-	catanServer.handleBoardCreation(socket, currentRoom);
 	handleHousePlacement(socket, currentRoom);
 	handleRoadPlacement(socket, currentRoom);
 	handleRobberPlacement(socket, currentRoom);
-	handleBeginTurn(socket, currentRoom);
+	handleBeginTurn(io, socket, currentRoom);
 };
 
-function handleBeginTurn(socket, currentRoom) {
+function handleRegister(socket, nickNames, guestNumber, namesUsed) {
+	socket.on('register', function(uuid) {
+		console.log("register, ", uuid);
+		var storedName = null;
+		for (var key in uuids) {
+			if (uuids[key] == uuid) {
+				storedName = key;
+			}
+		}
+		console.log(storedName);
+		if (!storedName) { //New User
+			console.log("new User");
+			guestNumber = assignGuestName(socket, guestNumber, nickNames, namesUsed);
+			joinRoom(socket, 'Lobby');
+			uuids[nickNames[socket.id]] = uuid; //Nickname to uuid
+		} else { //They do exist, remove from disconnecting, this is the new socket of the old player
+			//nickname to this socket
+			//room to this socket
+			//remove old socket from
+			var oldSocketId = null;
+			for (key in nickNames) {
+				if (nickNames[key] == storedName) {
+					oldSocketId = key;
+				}
+			}
+			var oldRoom = currentRoom[oldSocketId];
+
+			console.log("Old User ", oldSocketId, oldRoom);
+
+			disconnectOldSocket(oldSocketId, nickNames); //remove from disconnecting, remove old socket
+
+			nickNames[socket.id] = storedName;
+			currentRoom[socket.id] = oldRoom;
+			namesUsed.push(storedName);
+
+			console.log("New Nickname ", nickNames[socket.id], "new Room ", currentRoom[socket.id], "List of names used ", namesUsed);
+		}
+
+		catanServer.handlePlayerJoin(socket, currentRoom[socket.id]);
+		catanServer.handleBoardCreation(socket, currentRoom[socket.id]);
+
+	});
+}
+
+function handleBeginTurn(io, socket, currentRoom) {
 	socket.on("beginTurn", function(turnInfo) {
 		//TODO people can activate development cards before roll.
-		catanServer.handleBeginTurn(socket, currentRoom, turnInfo);
+		catanServer.handleBeginTurn(io, socket, currentRoom[socket.id], turnInfo);
 	});
 }
 
 function handleRobberPlacement(socket, currentRoom) {
 	socket.on("robberPlacement", function(robberInfo) {
-		catanServer.handleRobberPlacement(socket, currentRoom, robberInfo);
+		catanServer.handleRobberPlacement(socket, currentRoom[socket.id], robberInfo);
 	})
 }
 
 function handleHousePlacement(socket) {
 	socket.on("vertex", function(locationInfo) {
-		catanServer.handleHousePlacement(socket, currentRoom, locationInfo);
+		console.log(currentRoom, socket.id);
+		catanServer.handleHousePlacement(socket, currentRoom[socket.id], locationInfo);
 	});
 }
 
 function handleRoadPlacement(socket) {
 	socket.on("road", function(roadInfo) {
-		catanServer.handleRoadPlacement(socket, currentRoom, roadInfo);
+		catanServer.handleRoadPlacement(socket, currentRoom[socket.id], roadInfo);
 	});
 }
 
@@ -104,6 +144,8 @@ function handleNameChangeAttempts(socket, nickNames, namesUsed) {
 				var previousNameIndex = namesUsed.indexOf(previousName);
 				namesUsed.push(name);
 				nickNames[socket.id] = name;
+				uuids[name] = uuids[previousName];
+				delete uuids[previousName];
 				delete namesUsed[previousNameIndex];
 				socket.emit("nameResult", {success: true, name: name});
 
@@ -130,12 +172,33 @@ function handleRoomJoining(socket) {
 	});
 }
 
-function handleUserDisconnection(socket) {
+function handleUserDisconnection(socket, nickNames) {
 	socket.on('disconnect', function() {
-		console.log("Disconnecting ", socket.id)
-		var nameIndex = namesUsed.indexOf(nickNames[socket.id]);
-		delete namesUsed[nameIndex];
-		delete nickNames[socket.id];
-		delete currentRoom[socket.id];
+		disconnecting.push(nickNames[socket.id]);
+
+		setTimeout(function () {
+
+			if (disconnecting.indexOf(nickNames[socket.id]) != -1) {
+				//Delete nickname, nickname to uuid, names used, current room of that socket
+				disconnectOldSocket(socket.id, nickNames);
+			}
+
+		}, 10000)
 	});
+}
+
+function disconnectOldSocket(socketId, nickNames) {
+	console.log("Disconnecting ", socketId);
+	var index = disconnecting.indexOf(nickNames[socketId]);
+	if (index > -1) {
+		disconnecting.splice(index, 1);
+	}
+
+	index = namesUsed.indexOf(nickNames[socketId]);
+	if (index > -1) {
+		namesUsed.splice(index, 1);
+	}
+	delete nickNames[socketId];
+	delete currentRoom[socketId];
+	delete uuids[nickNames[socketId]];
 }
