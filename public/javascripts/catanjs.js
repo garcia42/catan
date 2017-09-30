@@ -21,6 +21,7 @@ var svgContainer =
 var resourceEntries = ["wood", "brick", "sheep", "wheat", "ore"];
 var hexagonColors = ["rgba(0,102,0,0.4)", "rgba(255,0,0,0.4)", "rgba(0,255,0,0.4)", "rgba(255,255,0,0.4)", "rgba(96,96,96,0.4)", "rgba(255,255,204,0.4)"];
 var playerColors = ["red", "blue", "purple", "green"];
+var devCards = ['Knight', 'Victory point', 'Road building', 'Monopoly', 'Year of plenty'];
 
 var playerIndex = 0;
 var playerTurn = 0;
@@ -43,11 +44,11 @@ $(document).ready(function() {
         createNumbersUi(serverData["hexagons"]);
         createPlayerBoxesUi();
         createPlayerResourcesUi();
+        createActionsUi();
 
         playerIndex = serverData["playerIndex"];
 
         addOnClickListenerToVertices(socket);
-        addOnClickListenerToRoads(socket);
         addOnClickListenerToNumberCircles(socket); //Robber click
         addOnClickListenerToEndTurn(socket);
     //     //moveCirclesInFrontOfText();   // Either this or make a event listener for the text.
@@ -59,7 +60,129 @@ $(document).ready(function() {
     handleRobberMovement(socket);
     handleDiceRoll(socket);
     handleCardDistribution(socket);
+    handleShineRoads(socket);
+    handleShineSettlements(socket);
+    handleShineCities(socket)
+    handleBuyDevelopmentCard(socket);
 });
+
+function createActionsUi() {
+    var actions = ["Build Road", "Play Development Card", "Build City", "Build Settlement", "Buy Development Card", "End Turn"];
+    var actionMethods = [
+        shineRoads,
+        playDevelopmentCard,
+        shineCities,
+        shineSettlements,
+        buyDevelopmentCard,
+        addOnClickListenerToEndTurn];
+    svgContainer.selectAll(".action").data(actionMethods).enter()
+        .append('rect')
+        .attr('class', 'action')
+        .attr('x', .78 * containerWidth)
+        .attr('y', function(d, i) {
+            return containerHeight/4 + i * containerHeight/12;
+        })
+        .attr('width', containerWidth/5)
+        .attr('height', containerHeight/12)
+        .attr('fill', 'white')
+        .attr("style", "outline: thin solid red;")
+        .on("click", function(d, i) {
+            d(); //d is a reference to a function
+            d3.event.stopPropagation();
+        });;
+
+    svgContainer.selectAll('.actionText').data(svgContainer.selectAll('.action')[0])
+        .enter().append("text")
+        .attr('class', 'actionText')
+        .attr('x', function(d, i) {
+            return parseInt(d.attributes.x.value) + radius / 2;
+        })
+        .attr('y', function(d, i) {
+            return parseInt(d.attributes.y.value) + radius / 2;
+        })
+        .attr('fill', 'black')
+        .attr('font-size', (radius/4).toString() + "px")
+        .text(function(d, i) {
+            return actions[i];
+        });
+}
+
+function shineRoads() {
+    socket.emit('shineRoads', playerIndex);
+}
+
+function playDevelopmentCard() {
+
+}
+
+function shineCities() {
+    socket.emit('shineCities', playerIndex);
+}
+
+function shineSettlements() {
+    socket.emit('shineSettlements', {'playerIndex': playerIndex, 'type': 0});
+}
+
+function buyDevelopmentCard() {
+    socket.emit('buyDevCard', playerIndex);
+}
+
+function handleBuyDevelopmentCard(socket) {
+    socket.on('buyDevCard', function(devCardData) {
+        console.log(devCards[devCardData['devCardIndex']]);
+        var playerIndex = devCardData['playerIndex'];
+        var devCardIndex = devCardData['devCardIndex'];
+    })
+}
+
+function handleShineCities(socket) {
+    socket.on('shineCities', function(shineCities) {
+        console.log("Shine Cities");
+        shineHouseLocations(socket, shineCities, 1);
+    });
+}
+
+function handleShineSettlements(socket) {
+    socket.on('shineSettlements', function(shineSettlements) {
+        shineHouseLocations(socket, shineSettlements, 0);
+    });
+}
+
+//Type will be 0 for settlements, 1 for town
+function shineHouseLocations(socket, shineSettlements, type) {
+    var vertices = svgContainer.selectAll('.vertexCircle')[0];
+    if (shineSettlements.length != 0 && vertices[shineSettlements[0]].attributes.fill.value == "white") {
+        shineSettlements.forEach(function(shineSettlementIndex) {
+            if (type == 1) { //If city, restore to player's color
+                vertices[shineSettlementIndex].attributes.fill.value = playerColors[playerIndex];
+            } else {
+                vertices[shineSettlementIndex].attributes.fill.value = "transparent";
+            }
+        });
+    } else {
+        addOnClickListenerToVertices(shineSettlements);
+        shineSettlements.forEach(function(shineSettlementIndex) {
+            vertices[shineSettlementIndex].attributes.fill.value = "white";
+        })
+    }
+}
+
+function handleShineRoads(socket) {
+    socket.on("shineRoads", function(shineRoads) {
+
+        var roads = svgContainer.selectAll('.road')[0];
+        if (shineRoads.length != 0 && roads[shineRoads[0]].attributes.stroke.value == "white") {
+            shineRoads.forEach(function(shineRoadIndex) {
+                roads[shineRoadIndex].attributes.stroke.value = "transparent";
+            });
+        } else {
+            addOnClickListenerToRoads(socket, shineRoads);
+            shineRoads.forEach(function(shineRoadIndex) {
+                roads[shineRoadIndex].attributes.stroke.value = "white";
+            });
+        }
+    })
+}
 
 function createPlayerResourcesUi() {
     var resourceColors = hexagonColors.slice();
@@ -95,7 +218,6 @@ function createPlayerResourcesUi() {
 
 function handleCardDistribution(socket) {
     socket.on('cards', function(cardData) {
-        console.log(cardData);
         var playerSquares = svgContainer.selectAll('.cardCount')[0];
         var resourceText = svgContainer.selectAll('.resourceText')[0];
         for (var key in cardData) {
@@ -104,7 +226,6 @@ function handleCardDistribution(socket) {
                 totalCards += cardData[key].cardData[resource];
 
                 if (key == playerIndex) {
-                    console.log(resourceText[i], cardData[key].cardData[resource], resource);
                     resourceText[i].innerHTML = cardData[key].cardData[resource];
                 }
 
@@ -150,10 +271,24 @@ function createPlayerBoxesUi() {
         .attr('font-size', (radius/4).toString()+"px")
         .attr('fill', 'white')
         .attr('x', function(d, i) {
-            return parseInt(d.attributes.x.value) + 10;
+            return parseInt(d.attributes.x.value) + radius/5;
         })
         .attr('y', function(d, i) {
             return parseInt(d.attributes.y.value) + 10;
+        })
+
+    svgContainer.selectAll('.devCardCount')
+        .data(svgContainer.selectAll('.player')[0])
+        .enter().append('text')
+        .attr('class', '.devCardCount')
+        .text('Dev Cards: 0')
+        .attr('font-size', (radius/4).toString()+"px")
+        .attr('fill', 'white')
+        .attr('x', function(d, i) {
+            return parseInt(d.attributes.x.value) + 10
+        })
+        .attr('y', function(d, i) {
+            return parseInt(d.attributes.y.value) + 2.5 * (radius/5);
         })
 }
 
@@ -166,13 +301,8 @@ function handleDiceRoll(socket) {
     });
 }
 
-function addOnClickListenerToEndTurn(socket) {
-    var endTurn = document.getElementById('end-turn');
-    endTurn.addEventListener("click", function() {
-        (function() {
-            socket.emit("beginTurn", null);
-        }());
-    });
+function addOnClickListenerToEndTurn() {
+    socket.emit("beginTurn", null);
 }
 
 function handleRobberMovement(socket) {
@@ -220,31 +350,50 @@ function handleRoadEvent(socket) {
     });
 }
 
-function addOnClickListenerToRoads() {
+function addOnClickListenerToRoads(socket, shineRoads) {
     var roads = svgContainer.selectAll('.road')[0];
     for (i = 0; i < roads.length; i++) {
-        (function() {
-            var road = roads[i];
-            road.addEventListener("click", function() {
-                    this.attributes.stroke.value = window.playerColors[playerIndex];
-                    socket.emit("road", {"id": parseInt(this.id.substring(this.id.indexOf('d') + 1))}); //road+id
-                },
-                false);
-        }());
+        if (shineRoads.indexOf(i) != -1) {
+            (function() {
+                var road = roads[i];
+                road.addEventListener("click", function() {
+                        if (this.attributes.stroke.value == "white") {
+                            this.attributes.stroke.value = window.playerColors[playerIndex];
+                            var id = parseInt(this.id.substring(this.id.indexOf('d') + 1));
+                            socket.emit("road", {"id": id}); //road+id
+
+                            roads.forEach(function(roadToReset) {
+                                if (roadToReset.attributes.stroke.value == "white") {
+                                    roadToReset.attributes.stroke.value = "transparent";
+                                }
+                            })
+                        }
+                    },
+                    false);
+            }());
+        }
     }
 }
 
-function addOnClickListenerToVertices() {
+function addOnClickListenerToVertices(shineSpots) {
 
     var vertexCircles = svgContainer.selectAll('.vertexCircle')[0];
 
-    for (var i = 0; i < vertexCircles.length; i++) {
+    for (var i = 0; i < shineSpots.length; i++) {
         (function () {
             var circle = vertexCircles[i];
             circle.addEventListener("click", function() {
-                this.attributes.fill.value = window.playerColors[window.playerIndex];
-                var locationInfo = {"id": parseInt(circle.id.substring(circle.id.indexOf('x') + 1))}; //vertex+id
-                socket.emit("vertex", locationInfo);
+                if (this.attributes.fill.value == "white") {
+                    this.attributes.fill.value = window.playerColors[window.playerIndex];
+                    var locationInfo = {"id": parseInt(circle.id.substring(circle.id.indexOf('x') + 1))}; //vertex+id
+                    socket.emit("vertex", locationInfo);
+
+                    vertexCircles.forEach(function(vertexToReset) {
+                        if (vertexToReset.attributes.fill.value == "white") {
+                            vertexToReset.attributes.fill.value = "transparent";
+                        }
+                    })
+                }
             }, false);
         }());
     }

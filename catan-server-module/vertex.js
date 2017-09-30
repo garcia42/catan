@@ -7,7 +7,7 @@ class Vertex {
 		this.hexagons = [];
 		this.diceNumbers = [];
 		this.neighbors = [];
-		this.roads = {};
+		this.roads = [];
 		this.houseType = 0;
 		this.playerIndex = -1;
 	}
@@ -56,8 +56,8 @@ class Vertex {
     	return this.circle;
     }
 
-	addRoad(roadId, vertexId) {
-		this.roads[roadId] = vertexId;
+	addRoad(roadId) {
+		this.roads.push(roadId);
 	}
 
 	getRoads() {

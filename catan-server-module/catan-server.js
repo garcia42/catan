@@ -12,6 +12,7 @@ var playerIndexData = {}; //socket id to playerNumber
 var robberData = {};
 var playerTurn = {};
 var playerCardData = {};
+var developmentCardData = {};
 
 var scale = 1;
 var radius = 50;
@@ -23,6 +24,7 @@ exports.handleBoardCreation = function createBoard(socket, currentRoom) {
 		hexagonData[currentRoom] = createHexagonObjects(radiusScaled);
 		vertexData[currentRoom] = createVertexObjects(hexagonData[currentRoom], radiusScaled);
 		roadData[currentRoom] = createRoadObjects(vertexData[currentRoom]);
+        developmentCardData[currentRoom] = createDevelopmentCards();
 	}
 
 	console.log("Emitting Hexagons to Client ", socket.id);
@@ -34,6 +36,11 @@ exports.handleBoardCreation = function createBoard(socket, currentRoom) {
 		  	"roads": roadData[currentRoom]
 		});
 	// return hexagons;
+}
+
+function createDevelopmentCards() {
+    //Order: knight, victory point, road building, monopoly, year of plenty
+    return [14, 5, 2, 2, 2];
 }
 
 exports.handlePlayerJoin = function handlePlayerJoin(socket, currentRoom) {
@@ -173,7 +180,7 @@ var d3_hexbinAngles = d3.range(0, 2 * Math.PI + Math.PI/3, Math.PI / 3);
 
 function createRoadObjects(vertices) {
     var roads = [];
-    for (i = 0; i < vertices.length; i++) {
+    for (var i = 0; i < vertices.length; i++) {
         var x = vertices[i].getX();
         var y = vertices[i].getY();
         for (j = 0; j < vertices[i].getNeighbors().length; j++) {
@@ -187,7 +194,13 @@ function createRoadObjects(vertices) {
                     break;
                 }
             }
+
             if (add) {
+                road.setId(roads.length);
+                vertices[i].addRoad(road.getId());
+                vertices[vertices[i].getNeighbors()[j]].addRoad(road.getId());
+                road.addEndpoint(vertices[i].getId());
+                road.addEndpoint(vertices[vertices[i].getNeighbors()[j]].getId());
                 roads.push(road);
             }
         }
@@ -261,19 +274,111 @@ function getRandomColorNumber(colorCount, hexagonIndex, robberIndex) {
 
 
 
+exports.handleBuyDevelopmentCard = function(io, socket, currentRoom, playerIndex) {
+    var devCards = developmentCardData[currentRoom];
+    var sum = devCards.reduce(add, 0);
+    var cardRandom = Math.floor(Math.random()*sum); //Choose random index in list to determine which card to get
+    var index = 0;
+    console.log(cardRandom, devCards);
+    if (sum == 0) {
+        socket.emit('noMoreDevCards', null);
+        return;
+    }
+    while (cardRandom >= 0) {
+        if (cardRandom - devCards[index] > 0) {
+            cardRandom -= devCards[index]
+        } else if (devCards[index] > 0) {
+            devCards[index] -= 1;
+            console.log(index, developmentCardData);
+            io.sockets.in(currentRoom).emit('buyDevCard', {"playerIndex": playerIndex, "devCardIndex": index});
+            return;
+        }
+        index ++;
+    }
+}
+
+function add(a, b) {
+    return a + b;
+}
+
+exports.handleShineCities = function(socket, currentRoom, playerIndex) {
+    var vertices = vertexData[currentRoom];
+    var shineCities = [];
+    vertices.forEach(function(vertex) {
+        if (vertex.getHouseType() == 1 && vertex.getPlayerIndex() == playerIndex) {
+            shineCities.push(vertex.getId());
+        }
+    })
+    socket.emit('shineCities', shineCities);
+}
+
+//type will be 0 for beginning of game, will be 1 for in turns
+exports.handleShineSettlements = function(socket, currentRoom, settlementInfo) {
+    var playerIndex = settlementInfo["playerIndex"];
+    var type = settlementInfo["type"];
+    var vertices = vertexData[currentRoom];
+    var shineSettlements = [];
+
+    vertices.forEach(function(vertex) {
+        if (vertex.getPlayerIndex() == -1) {
+            var add = true;
+            vertex.getNeighbors().forEach(function(vertexNeighborIndex) {
+                if (vertices[vertexNeighborIndex].getPlayerIndex() != -1) {
+                    add = false;
+                }
+            });
+            if (add) {
+                shineSettlements.push(vertex.getId());
+            }
+        }
+    });
+
+    if (type == 1) {
+        var shineSettlementsInGame = [];
+        var roads = roadData[currentRoom];
+        shineSettlements.forEach(function(vertexIndex, i) {
+            var vertexRoads = vertices[vertexIndex].getRoads();
+            for (var j = 0; j < vertexRoads.length; j++) {
+                if (roads[vertexRoads[j]].getPlayerIndex() == playerIndex) {
+                    shineSettlementsInGame.push(vertexIndex);
+                    break;
+                }
+            }
+        });
+        socket.emit('shineSettlements', shineSettlementsInGame);
+    } else {
+        socket.emit('shineSettlements', shineSettlements);
+    }
+}
 
 
+exports.handleShineRoads = function(socket, currentRoom, playerIndex) {
+    var vertices = vertexData[currentRoom];
+    var roads = roadData[currentRoom];
+    var shineRoads = [];
+    vertices.forEach(function(vertex, i) {
+        if (vertex.getPlayerIndex() == playerIndex) {
+            vertex.getRoads().forEach(function(roadIndex) {
+                if (roads[roadIndex].getPlayerIndex() == -1) {
+                    shineRoads.push(roadIndex);
+                }
+            })
+        }
+    });
 
-
-
-
-
-
-
-
-
-
-
+    roads.forEach(function(road, i) {
+        if (road.getPlayerIndex() == playerIndex) {
+            road.getEndpoints().forEach(function(vertexEndpoint) {
+                vertices[vertexEndpoint].getRoads().forEach(function(neighborRoad) {
+                    if (roads[neighborRoad].getPlayerIndex() == -1) {
+                        shineRoads.push(neighborRoad);
+                    }
+                });
+            });
+        }
+    })
+    socket.emit("shineRoads", shineRoads);
+}
 
 exports.handleHousePlacement = function(socket, currentRoom, locationInfo) {
 	var vertexId = locationInfo["id"];

@@ -7,6 +7,7 @@ class Road {
 		this.y2 = yT;
 		this.id = id;
 		this.endPoints = []; //Vertices at ends of this road
+		this.playerIndex = -1;
 	}
 
 	isEqual(road) { //TODO Change this to see if there is a road between the same two endpoints

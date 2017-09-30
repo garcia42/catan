@@ -26,7 +26,35 @@ exports.onConnection = function(socket, fieldio) {
 	handleRoadPlacement(socket, currentRoom);
 	handleRobberPlacement(socket, currentRoom);
 	handleBeginTurn(io, socket, currentRoom);
+	handleShineRoads(socket, currentRoom);
+	handleShineSettlements(socket, currentRoom);
+	handleShineCities(socket, currentRoom);
+	handleBuyDevelopmentCard(io, socket, currentRoom);
 };
+
+function handleBuyDevelopmentCard(io, socket, currentRoom) {
+	socket.on('buyDevCard', function(devCardData) {
+		catanServer.handleBuyDevelopmentCard(io, socket, currentRoom[socket.id], devCardData);
+	})
+}
+
+function handleShineCities(socket, currentRoom) {
+	socket.on('shineCities', function(playerIndex) {
+		catanServer.handleShineCities(socket, currentRoom[socket.id], playerIndex);
+	})
+}
+
+function handleShineSettlements(socket, currentRoom) {
+	socket.on('shineSettlements', function(settlementInfo) {
+		catanServer.handleShineSettlements(socket, currentRoom[socket.id], settlementInfo);
+	});
+}
+
+function handleShineRoads(socket, currentRoom) {
+	socket.on('shineRoads', function(playerIndex) {
+		catanServer.handleShineRoads(socket, currentRoom[socket.id], playerIndex);
+	});
+}
 
 function handleRegister(socket, nickNames, guestNumber, namesUsed) {
 	socket.on('register', function(uuid) {

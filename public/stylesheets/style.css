@@ -3,6 +3,16 @@ body {
 */	font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
 }
 
+.button {
+    -webkit-transition-duration: 0.4s; /* Safari */
+    transition-duration: 0.4s;
+}
+
+.button:hover {
+    background-color: #4CAF50; /* Green */
+    color: white;
+}
+
 a {
 	color: #00B7FF;
 }
