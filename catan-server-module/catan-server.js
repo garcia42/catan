@@ -3,7 +3,9 @@ const Vertex = require('./vertex');
 const d3 = require("d3");
 require('./hexbin');
 const Road = require('./road');
-const PlayerCards = require('./playerCards');
+const PlayerCardsModule = require('./playerCards');
+const PlayerCards = PlayerCardsModule.PlayerCards;
+const order = PlayerCardsModule.order;
 
 var hexagonData = {}; //Channel name to list
 var vertexData = {};
@@ -12,7 +14,9 @@ var playerIndexData = {}; //socket id to playerNumber
 var robberData = {};
 var playerTurn = {};
 var playerCardData = {};
-var developmentCardData = {};
+var developmentCardData = {}; // Number of dev cards still left in a game
+var portVertexData = {};
+var victoryPointData = {};
 
 var scale = 1;
 var radius = 50;
@@ -25,7 +29,9 @@ exports.handleBoardCreation = function createBoard(socket, currentRoom) {
 		vertexData[currentRoom] = createVertexObjects(hexagonData[currentRoom], radiusScaled);
 		roadData[currentRoom] = createRoadObjects(vertexData[currentRoom]);
         developmentCardData[currentRoom] = createDevelopmentCards();
+        portVertexData[currentRoom] = createPortVertices(vertexData[currentRoom]);
 	}
+
 
 	console.log("Emitting Hexagons to Client ", socket.id);
 	socket.emit('newBoard', 
@@ -33,9 +39,46 @@ exports.handleBoardCreation = function createBoard(socket, currentRoom) {
 			"playerIndex": getPlayerIndex(socket, currentRoom),
 		 	"hexagons": hexagonData[currentRoom],
 		  	"vertices": vertexData[currentRoom],
-		  	"roads": roadData[currentRoom]
+		  	"roads": roadData[currentRoom],
+            "ports": portVertexData[currentRoom]
 		});
-	// return hexagons;
+}
+
+function createPortVertices(vertices) {
+    var twoNeighbors = [];
+    var inelligibleIds = [];
+    portVertices = [];
+    vertices.forEach(function(vertex) {
+        if (vertex.getNeighbors().length == 2) {
+            twoNeighbors.push(vertex)
+        }
+    });
+
+    while (portVertices.length < 18) {
+        for (var i = 0; i < twoNeighbors.length; i++) {
+            if (inelligibleIds.indexOf(twoNeighbors[i].getId()) == -1) {
+                var chosenVertexId = twoNeighbors[i].getId();
+
+                portVertices.push(chosenVertexId);
+                inelligibleIds.push(chosenVertexId);
+
+                var chosenNeighborId;
+                if (inelligibleIds.indexOf(vertices[chosenVertexId].getNeighbors()[0]) == -1) {
+                    chosenNeighborId = vertices[chosenVertexId].getNeighbors()[0];
+                } else {
+                    chosenNeighborId = vertices[chosenVertexId].getNeighbors()[1];
+                }
+
+                inelligibleIds = inelligibleIds.concat(vertices[chosenVertexId].getNeighbors());
+
+                var neighbor2 = vertices[chosenNeighborId].getNeighbors();
+                portVertices.push(chosenNeighborId);
+                inelligibleIds = inelligibleIds.concat(neighbor2);
+                break;
+            }
+        }
+    }
+    return portVertices;
 }
 
 function createDevelopmentCards() {
@@ -46,6 +89,21 @@ function createDevelopmentCards() {
 exports.handlePlayerJoin = function handlePlayerJoin(socket, currentRoom) {
     assignPlayerIndex(socket, currentRoom);
     createPlayerCardObject(socket, currentRoom);
+    createVictoryPointData(socket, currentRoom);
+}
+
+function createVictoryPointData(socket, currentRoom) {
+    if (victoryPointData[currentRoom] == null) {
+        victoryPointData[currentRoom] = {};
+    }
+    if (victoryPointData[currentRoom][getPlayerIndex(socket, currentRoom)] == null) {
+        victoryPointData[currentRoom][getPlayerIndex(socket, currentRoom)] = 0;
+    }
+}
+
+function incrementVictoryPointData(socket, currentRoom) {
+    victoryPointData[currentRoom][getPlayerIndex(socket, currentRoom)] =
+    parseInt(victoryPointData[currentRoom][getPlayerIndex(socket, currentRoom)]) + 1;
 }
 
 function assignPlayerIndex(socket, currentRoom) {
@@ -279,7 +337,6 @@ exports.handleBuyDevelopmentCard = function(io, socket, currentRoom, playerIndex
     var sum = devCards.reduce(add, 0);
     var cardRandom = Math.floor(Math.random()*sum); //Choose random index in list to determine which card to get
     var index = 0;
-    console.log(cardRandom, devCards);
     if (sum == 0) {
         socket.emit('noMoreDevCards', null);
         return;
@@ -288,9 +345,13 @@ exports.handleBuyDevelopmentCard = function(io, socket, currentRoom, playerIndex
         if (cardRandom - devCards[index] > 0) {
             cardRandom -= devCards[index]
         } else if (devCards[index] > 0) {
+            if (index == 1) {
+                handleVictoryPointChange(io, socket, currentRoom, playerIndex);
+            }
+
             devCards[index] -= 1;
-            console.log(index, developmentCardData);
-            io.sockets.in(currentRoom).emit('buyDevCard', {"playerIndex": playerIndex, "devCardIndex": index});
+            getPlayerCardData(socket, currentRoom).addResourceAmount(5 + index, 1);
+            io.sockets.in(currentRoom).emit('buyDevCard', {"cardData": getPlayerCardData(socket, currentRoom), "devCardIndex": index});
             return;
         }
         index ++;
@@ -299,6 +360,12 @@ exports.handleBuyDevelopmentCard = function(io, socket, currentRoom, playerIndex
 
 function add(a, b) {
     return a + b;
+}
+
+function handleVictoryPointChange(io, socket, currentRoom) {
+    incrementVictoryPointData(socket, currentRoom);
+    console.log(victoryPointData[currentRoom]);
+    io.sockets.in(currentRoom).emit('victoryPoint', victoryPointData[currentRoom]);
 }
 
 exports.handleShineCities = function(socket, currentRoom, playerIndex) {
@@ -380,7 +447,7 @@ exports.handleShineRoads = function(socket, currentRoom, playerIndex) {
     socket.emit("shineRoads", shineRoads);
 }
 
-exports.handleHousePlacement = function(socket, currentRoom, locationInfo) {
+exports.handleHousePlacement = function(io, socket, currentRoom, locationInfo) {
 	var vertexId = locationInfo["id"];
 	var specificVertex = vertexData[currentRoom][vertexId];
     var playerIndex = getPlayerIndex(socket, currentRoom);
@@ -389,6 +456,8 @@ exports.handleHousePlacement = function(socket, currentRoom, locationInfo) {
 
 	locationInfo["playerIndex"] = playerIndex;
 	console.log("Location Info ", locationInfo);
+
+    handleVictoryPointChange(io, socket, currentRoom);
 	socket.broadcast.to(currentRoom).emit('vertex', locationInfo);
 }
 

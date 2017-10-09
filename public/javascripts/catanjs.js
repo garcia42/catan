@@ -45,6 +45,7 @@ $(document).ready(function() {
         createPlayerBoxesUi();
         createPlayerResourcesUi();
         createActionsUi();
+        createPortsUi(serverData['ports']);
 
         playerIndex = serverData["playerIndex"];
 
@@ -64,7 +65,48 @@ $(document).ready(function() {
     handleShineSettlements(socket);
     handleShineCities(socket)
     handleBuyDevelopmentCard(socket);
+    handleVictoryPointChange(socket);
 });
+
+function handleVictoryPointChange(socket) {
+    socket.on('victoryPoint', function(victoryPointInfo) {
+        var victoryPoints = svgContainer.selectAll('.victoryPoint')[0];
+        for (var index in victoryPointInfo) {
+            victoryPoints[parseInt(index)].innerHTML = "Victory Points: " + victoryPointInfo[parseInt(index)];
+        }
+    });
+}
+
+function createPortsUi(ports) {
+    var vertices = svgContainer.selectAll('.vertexCircle')[0];
+    var portCircles = [];
+    for (var i = 0; i < ports.length; i++) {
+        var portIndex = ports[i];
+        var portIndex2 = ports[i+1];
+        if (i % 2 == 0) {
+            var x1 = parseInt(vertices[portIndex].attributes.cx.value);
+            var x2 = parseInt(vertices[portIndex2].attributes.cx.value);
+            var newX = (x1 + x2) / 2;
+
+            var y1 = parseInt(vertices[portIndex].attributes.cy.value);
+            var y2 = parseInt(vertices[portIndex2].attributes.cy.value);
+            var newY = (y1 + y2) / 2;
+            portCircles.push([newX, newY]);
+        }
+    };
+
+    svgContainer.selectAll('.portCircle').data(portCircles).enter()
+        .append('circle')
+        .attr('class', 'portCircle')
+        .attr('cx', function(d) {
+            return d[0];
+        })
+        .attr('cy', function(d) {
+            return d[1];
+        })
+        .attr('r', radius/4)
+        .attr('fill', 'pink')
+}
 
 function createActionsUi() {
     var actions = ["Build Road", "Play Development Card", "Build City", "Build Settlement", "Buy Development Card", "End Turn"];
@@ -129,9 +171,17 @@ function buyDevelopmentCard() {
 
 function handleBuyDevelopmentCard(socket) {
     socket.on('buyDevCard', function(devCardData) {
-        console.log(devCards[devCardData['devCardIndex']]);
-        var playerIndex = devCardData['playerIndex'];
+        console.log(devCards[devCardData['devCardIndex']], devCardData['cardData']);
+        var playerCardData = devCardData['cardData'];
+        var playerIndex = playerCardData['playerIndex'];
         var devCardIndex = devCardData['devCardIndex'];
+        var devCardCount = svgContainer.selectAll('.devCardCount')[0][playerIndex];
+        var sum = 0;
+        for (var i = 0; i < devCards.length; i++) {
+            var card = devCards[i];
+            sum += playerCardData.cardData[card];
+        }
+        devCardCount.innerHTML = "Dev Cards: " + sum;
     })
 }
 
@@ -274,21 +324,63 @@ function createPlayerBoxesUi() {
             return parseInt(d.attributes.x.value) + radius/5;
         })
         .attr('y', function(d, i) {
-            return parseInt(d.attributes.y.value) + 10;
+            return parseInt(d.attributes.y.value) + radius/4;
         })
 
     svgContainer.selectAll('.devCardCount')
         .data(svgContainer.selectAll('.player')[0])
         .enter().append('text')
-        .attr('class', '.devCardCount')
+        .attr('class', 'devCardCount')
         .text('Dev Cards: 0')
         .attr('font-size', (radius/4).toString()+"px")
         .attr('fill', 'white')
         .attr('x', function(d, i) {
-            return parseInt(d.attributes.x.value) + 10
+            return parseInt(d.attributes.x.value) + 10;
         })
         .attr('y', function(d, i) {
-            return parseInt(d.attributes.y.value) + 2.5 * (radius/5);
+            return parseInt(d.attributes.y.value) + 2 * radius/4;
+        })
+
+    svgContainer.selectAll('.victoryPoint')
+        .data(svgContainer.selectAll('.player')[0])
+        .enter().append('text')
+        .attr('class', 'victoryPoint')
+        .text('Victory Points: 0')
+        .attr('font-size', (radius/4).toString()+'px')
+        .attr('fill', 'white')
+        .attr('x', function(d, i) {
+            return parseInt(d.attributes.x.value) + 10;
+        })
+        .attr('y', function(d, i) {
+            return parseInt(d.attributes.y.value) + 3 * radius/4;
+        })
+
+    svgContainer.selectAll('.knightsUsed')
+        .data(svgContainer.selectAll('.player')[0])
+        .enter().append('text')
+        .attr('class', 'knightsUsed')
+        .text('Knights Used: 0')
+        .attr('font-size', (radius/4).toString()+'px')
+        .attr('fill', 'white')
+        .attr('x', function(d, i) {
+            return parseInt(d.attributes.x.value) + 10;
+        })
+        .attr('y', function(d, i) {
+            return parseInt(d.attributes.y.value) + 4 * radius/4;
+        })
+
+    svgContainer.selectAll('.longestRoad')
+        .data(svgContainer.selectAll('.player')[0])
+        .enter().append('text')
+        .attr('class', 'longestRoad')
+        .text('Longest Road: 0')
+        .attr('font-size', (radius/4).toString()+'px')
+        .attr('fill', 'white')
+        .attr('x', function(d, i) {
+            return parseInt(d.attributes.x.value) + 10;
+        })
+        .attr('y', function(d, i) {
+            return parseInt(d.attributes.y.value) + 5 * radius/4;
         })
 }
 

@@ -1,22 +1,13 @@
-var order = ["wood", "brick", "sheep", "wheat", "ore", "knight", "monopoly", "yearOfPlenty", "victoryCard", "roadBuilding"];
+var order = ["wood", "brick", "sheep", "wheat", "ore", 'Knight', 'Victory point', 'Road building', 'Monopoly', 'Year of plenty'];
 
 class PlayerCards {
 
 	constructor(index) {
 		this.playerIndex = index;
-		this.cardData = 
-            {
-                "wood": 0,
-                "brick": 0,
-                "sheep": 0,
-                "wheat": 0,
-                "ore": 0,
-                "knight": 0,
-                "monopoly": 0,
-                "yearOfPlenty": 0,
-                "victoryCard": 0,
-                "roadBuilding": 0
-            }
+		this.cardData = {};
+		for (var resource in order) {
+			this.cardData[order[resource]] = 0;
+		}
 	}
 
 	getPlayerIndex() {
@@ -64,4 +55,5 @@ class PlayerCards {
 	}
 }
 
-module.exports = PlayerCards;
+module.exports.PlayerCards = PlayerCards;
+module.exports.order = order;

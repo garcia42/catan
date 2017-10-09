@@ -22,7 +22,7 @@ exports.onConnection = function(socket, fieldio) {
 
 	handleUserDisconnection(socket, nickNames, namesUsed);
 	// socket.leave(socket.id); //Added this because sockets join a room of their own socket id.
-	handleHousePlacement(socket, currentRoom);
+	handleHousePlacement(io, socket, currentRoom);
 	handleRoadPlacement(socket, currentRoom);
 	handleRobberPlacement(socket, currentRoom);
 	handleBeginTurn(io, socket, currentRoom);
@@ -113,10 +113,10 @@ function handleRobberPlacement(socket, currentRoom) {
 	})
 }
 
-function handleHousePlacement(socket) {
+function handleHousePlacement(io, socket, currentRoom) {
 	socket.on("vertex", function(locationInfo) {
 		console.log(currentRoom, socket.id);
-		catanServer.handleHousePlacement(socket, currentRoom[socket.id], locationInfo);
+		catanServer.handleHousePlacement(io, socket, currentRoom[socket.id], locationInfo);
 	});
 }
 
