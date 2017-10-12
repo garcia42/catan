@@ -10,7 +10,7 @@ var disconnecting = []; //List of nickNames that are disconnecting
 exports.onConnection = function(socket, fieldio) {
 	io = fieldio;
 
-	handleRegister(socket, nickNames, guestNumber, namesUsed); //Join room, or set to old socket if returning user
+	handleRegister(socket, nickNames, namesUsed); //Join room, or set to old socket if returning user
 
 	handleMessageBroadcast(socket, nickNames);
 	handleNameChangeAttempts(socket, nickNames, namesUsed);
@@ -56,21 +56,20 @@ function handleShineRoads(socket, currentRoom) {
 	});
 }
 
-function handleRegister(socket, nickNames, guestNumber, namesUsed) {
+function handleRegister(socket, nickNames, namesUsed) {
 	socket.on('register', function(uuid) {
-		console.log("register, ", uuid);
+		console.log("REGISTER, ", uuid);
 		var storedName = null;
 		for (var key in uuids) {
 			if (uuids[key] == uuid) {
 				storedName = key;
 			}
 		}
-		console.log(storedName);
+		console.log("STORED NAME", storedName);
 		if (!storedName) { //New User
-			console.log("new User");
 			guestNumber = assignGuestName(socket, guestNumber, nickNames, namesUsed);
-			joinRoom(socket, 'Lobby');
 			uuids[nickNames[socket.id]] = uuid; //Nickname to uuid
+			console.log("NEW USER", nickNames[socket.id]);
 		} else { //They do exist, remove from disconnecting, this is the new socket of the old player
 			//nickname to this socket
 			//room to this socket
@@ -93,9 +92,10 @@ function handleRegister(socket, nickNames, guestNumber, namesUsed) {
 
 			console.log("New Nickname ", nickNames[socket.id], "new Room ", currentRoom[socket.id], "List of names used ", namesUsed);
 		}
-
-		catanServer.handlePlayerJoin(socket, currentRoom[socket.id]);
-		catanServer.handleBoardCreation(socket, currentRoom[socket.id]);
+		
+		joinRoom(socket, 'Lobby');
+		catanServer.handlePlayerJoin(socket, currentRoom[socket.id], nickNames[socket.id], uuid);
+		catanServer.handleBoardCreation(socket, uuid);
 
 	});
 }

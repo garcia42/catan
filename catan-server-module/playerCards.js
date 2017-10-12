@@ -53,6 +53,10 @@ class PlayerCards {
 	canBuyCity() {
 		return this.getResourceAmount(3) >= 2 && this.getResourceAmount(4) >= 3;
 	}
+
+	hasKnight() {
+		return this.getResourceAmount(5) > 0;
+	}
 }
 
 module.exports.PlayerCards = PlayerCards;

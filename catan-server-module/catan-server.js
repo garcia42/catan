@@ -6,25 +6,29 @@ const Road = require('./road');
 const PlayerCardsModule = require('./playerCards');
 const PlayerCards = PlayerCardsModule.PlayerCards;
 const order = PlayerCardsModule.order;
+const Player = require('./player');
 
 var hexagonData = {}; //Channel name to list
 var vertexData = {};
 var roadData = {};
-var playerIndexData = {}; //socket id to playerNumber
 var robberData = {};
 var playerTurn = {};
-var playerCardData = {};
 var developmentCardData = {}; // Number of dev cards still left in a game
+var roomData = {}; //currentRoom -> list of players in room
 var portVertexData = {};
-var victoryPointData = {};
+
+var playerData = {}; //uuid to playerData
+var playerCardData = {};
 
 var scale = 1;
 var radius = 50;
 var indicesLeft = [0,1,2,3];
 
-exports.handleBoardCreation = function createBoard(socket, currentRoom) {
+exports.handleBoardCreation = function createBoard(socket, uuid) {
 	var radiusScaled = radius * scale;
+    var currentRoom = playerData[uuid].getRoom();
 	if (hexagonData[currentRoom] == null) {
+        playerTurn[currentRoom] = -1;
 		hexagonData[currentRoom] = createHexagonObjects(radiusScaled);
 		vertexData[currentRoom] = createVertexObjects(hexagonData[currentRoom], radiusScaled);
 		roadData[currentRoom] = createRoadObjects(vertexData[currentRoom]);
@@ -34,13 +38,14 @@ exports.handleBoardCreation = function createBoard(socket, currentRoom) {
 
 
 	console.log("Emitting Hexagons to Client ", socket.id);
-	socket.emit('newBoard', 
+	socket.emit('newBoard',
 		{
-			"playerIndex": getPlayerIndex(socket, currentRoom),
+			"playerIndex": playerData[uuid].getPlayerIndex(),
 		 	"hexagons": hexagonData[currentRoom],
 		  	"vertices": vertexData[currentRoom],
 		  	"roads": roadData[currentRoom],
-            "ports": portVertexData[currentRoom]
+            "ports": portVertexData[currentRoom],
+            "players": roomData[currentRoom]
 		});
 }
 
@@ -86,58 +91,30 @@ function createDevelopmentCards() {
     return [14, 5, 2, 2, 2];
 }
 
-exports.handlePlayerJoin = function handlePlayerJoin(socket, currentRoom) {
-    assignPlayerIndex(socket, currentRoom);
-    createPlayerCardObject(socket, currentRoom);
-    createVictoryPointData(socket, currentRoom);
-}
-
-function createVictoryPointData(socket, currentRoom) {
-    if (victoryPointData[currentRoom] == null) {
-        victoryPointData[currentRoom] = {};
+//Only method that needs to know currentRoom, others can get it from uuid
+//Method will include playerIndex, created by chat server because it has more to do with joining and exiting chat rooms
+exports.handlePlayerJoin = function handlePlayerJoin(socket, currentRoom, nickName, uuid) {
+    if (playerData[uuid] == null) {
+        createPlayerDataObject(currentRoom, nickName, uuid);
+        emitPlayerToRestofRoom(socket, currentRoom, uuid);
     }
-    if (victoryPointData[currentRoom][getPlayerIndex(socket, currentRoom)] == null) {
-        victoryPointData[currentRoom][getPlayerIndex(socket, currentRoom)] = 0;
+    // console.log('PLAYERS IN ROOM', roomData[currentRoom]);
+}
+
+function emitPlayerToRestofRoom(socket, currentRoom) {
+    socket.broadcast.to(currentRoom).emit('newPlayer', roomData[currentRoom]);
+}
+
+function createPlayerDataObject(currentRoom, nickName, uuid) {
+    if (playerData[currentRoom] == null) {
+        playerData[currentRoom] = {};
     }
-}
-
-function incrementVictoryPointData(socket, currentRoom) {
-    victoryPointData[currentRoom][getPlayerIndex(socket, currentRoom)] =
-    parseInt(victoryPointData[currentRoom][getPlayerIndex(socket, currentRoom)]) + 1;
-}
-
-function assignPlayerIndex(socket, currentRoom) {
-    if (playerIndexData[currentRoom] == null) {
-        playerIndexData[currentRoom] = {};
+    if (roomData[currentRoom] == null) {
+        roomData[currentRoom] = [];
     }
-    if (getPlayerIndex(socket, currentRoom) == null) {
-        setPlayerIndex(socket, currentRoom, Object.keys(playerIndexData[currentRoom]).length);
-    }
-}
-
-function createPlayerCardObject(socket, currentRoom) {
-    if (playerCardData[currentRoom] == null) {
-        playerCardData[currentRoom] = {};
-    }
-    if (getPlayerCardData(socket, currentRoom) == null) {
-        setPlayerCardData(socket, currentRoom, new PlayerCards(getPlayerIndex(socket, currentRoom)));
-    }
-}
-
-function getPlayerCardData(socket, currentRoom) {
-    return playerCardData[currentRoom][getPlayerIndex(socket, currentRoom)];
-}
-
-function getPlayerIndex(socket, currentRoom) {
-    return playerIndexData[currentRoom][socket.id];
-}
-
-function setPlayerIndex(socket, currentRoom, index) {
-    playerIndexData[currentRoom][socket.id] = index;
-}
-
-function setPlayerCardData(socket, currentRoom, playerCards) {
-    playerCardData[currentRoom][getPlayerIndex(socket, currentRoom)] = playerCards;
+    var player = new Player(roomData[currentRoom].length, nickName, currentRoom, new PlayerCards(roomData[currentRoom].length));
+    playerData[uuid] = player;
+    roomData[currentRoom].push(player);
 }
 
 //Hexagon creation with color, number and center
@@ -332,7 +309,10 @@ function getRandomColorNumber(colorCount, hexagonIndex, robberIndex) {
 
 
 
-exports.handleBuyDevelopmentCard = function(io, socket, currentRoom, playerIndex) {
+exports.handleBuyDevelopmentCard = function(io, socket, currentRoom, payload) {
+    var playerIndex = payload["playerIndex"];
+    var uuid = payload["uuid"];
+    console.log("Buy Dev Card", "uuid", uuid, "playerIndex", playerIndex);
     var devCards = developmentCardData[currentRoom];
     var sum = devCards.reduce(add, 0);
     var cardRandom = Math.floor(Math.random()*sum); //Choose random index in list to determine which card to get
@@ -346,12 +326,12 @@ exports.handleBuyDevelopmentCard = function(io, socket, currentRoom, playerIndex
             cardRandom -= devCards[index]
         } else if (devCards[index] > 0) {
             if (index == 1) {
-                handleVictoryPointChange(io, socket, currentRoom, playerIndex);
+                handleVictoryPointChange(io, uuid, currentRoom);
             }
 
             devCards[index] -= 1;
-            getPlayerCardData(socket, currentRoom).addResourceAmount(5 + index, 1);
-            io.sockets.in(currentRoom).emit('buyDevCard', {"cardData": getPlayerCardData(socket, currentRoom), "devCardIndex": index});
+            playerData[uuid].getCards().addResourceAmount(5 + index, 1);
+            io.sockets.in(currentRoom).emit('buyDevCard', {"cardData": playerData[uuid].getCards(), "devCardIndex": index});
             return;
         }
         index ++;
@@ -362,13 +342,18 @@ function add(a, b) {
     return a + b;
 }
 
-function handleVictoryPointChange(io, socket, currentRoom) {
-    incrementVictoryPointData(socket, currentRoom);
-    console.log(victoryPointData[currentRoom]);
-    io.sockets.in(currentRoom).emit('victoryPoint', victoryPointData[currentRoom]);
+function handleVictoryPointChange(io, uuid, currentRoom) {
+    playerData[uuid].incrementVictoryPoints();
+    var listOfVp = roomData[currentRoom].map(i => i.getVictoryPoints());
+    console.log("Emitting Victory Point Data to ", currentRoom, listOfVp);
+    io.sockets.in(currentRoom).emit('victoryPoint', listOfVp);
 }
 
-exports.handleShineCities = function(socket, currentRoom, playerIndex) {
+exports.handleShineCities = function(socket, currentRoom, payload) {
+    var playerIndex = payload["playerIndex"];
+    var uuid = payload["uuid"];
+    console.log("Shine Cities", "uuid", uuid, "playerIndex", playerIndex);
+
     var vertices = vertexData[currentRoom];
     var shineCities = [];
     vertices.forEach(function(vertex) {
@@ -381,8 +366,11 @@ exports.handleShineCities = function(socket, currentRoom, playerIndex) {
 
 //type will be 0 for beginning of game, will be 1 for in turns
 exports.handleShineSettlements = function(socket, currentRoom, settlementInfo) {
+    var uuid = settlementInfo['uuid'];
     var playerIndex = settlementInfo["playerIndex"];
     var type = settlementInfo["type"];
+    console.log('Shine Settlements', "uuid", uuid, "playerIndex", playerIndex, "type", type);
+
     var vertices = vertexData[currentRoom];
     var shineSettlements = [];
 
@@ -419,7 +407,12 @@ exports.handleShineSettlements = function(socket, currentRoom, settlementInfo) {
 }
 
 
-exports.handleShineRoads = function(socket, currentRoom, playerIndex) {
+exports.handleShineRoads = function(socket, currentRoom, payload) {
+
+    var uuid = payload["uuid"];
+    var playerIndex = payload["playerIndex"];
+    console.log("Shine Roads", "uuid", uuid, "playerIndex", playerIndex);
+
     var vertices = vertexData[currentRoom];
     var roads = roadData[currentRoom];
     var shineRoads = [];
@@ -449,31 +442,36 @@ exports.handleShineRoads = function(socket, currentRoom, playerIndex) {
 
 exports.handleHousePlacement = function(io, socket, currentRoom, locationInfo) {
 	var vertexId = locationInfo["id"];
-	var specificVertex = vertexData[currentRoom][vertexId];
-    var playerIndex = getPlayerIndex(socket, currentRoom);
+    var uuid = locationInfo["uuid"];
+    var playerIndex = playerData[uuid].getPlayerIndex();
+    var specificVertex = vertexData[currentRoom][vertexId];
+    console.log("House Placement", "uuid", uuid, "playerIndex", playerIndex, 'specificVertex', vertexId);
+
 	specificVertex.setPlayerIndex(playerIndex);
 	specificVertex.upgradeHouse();
 
 	locationInfo["playerIndex"] = playerIndex;
-	console.log("Location Info ", locationInfo);
 
-    handleVictoryPointChange(io, socket, currentRoom);
+    handleVictoryPointChange(io, uuid, currentRoom);
 	socket.broadcast.to(currentRoom).emit('vertex', locationInfo);
 }
 
 exports.handleRoadPlacement = function(socket, currentRoom, roadInfo) {
-    var playerIndex = getPlayerIndex(socket, currentRoom);
+    var uuid = roadInfo["uuid"];
+    var playerIndex = playerData[uuid].getPlayerIndex();
 	var roadId = roadInfo["id"];
+    console.log("Road Placement", "uuid", uuid, "playerIndex", playerIndex, 'roadId', roadId);
+
 	roadData[currentRoom][roadId].setPlayerIndex(playerIndex);
 	roadInfo["playerIndex"] = playerIndex;
-	console.log("Road Info ", roadInfo);
 	socket.broadcast.to(currentRoom).emit("road", roadInfo);
 }
 
 exports.handleRobberPlacement = function(socket, currentRoom, robberInfo) {
+    var uuid = robberInfo['uuid'];
 	console.log("Robber Movement", robberInfo);
 	robberData[currentRoom] = robberInfo["hexIndex"];
-	// robberInfo["playerIndex"] = playerIndexData[socket.id];
+	// robberInfo["playerIndex"] = playerData[socket.id];
 	socket.broadcast.to(currentRoom).emit("robberPlacement", robberInfo);
 }
 
@@ -482,22 +480,47 @@ exports.handleBeginTurn = function(io, socket, currentRoom, turnInfo) {
 	//Roll dice
 		//Potentially move robber
 	//Distribute cards
-	console.log("Handle Begin Turn");
-	dice = getDiceRoll();
-	io.sockets.in(currentRoom).emit('dice', dice);
-	if (dice[0] + dice[1] == 7) {
-		console.log("ROBBER!!!");
-		robberEvent(io, socket);
-	} else {
-		distributeCards(io, socket, dice[0] + dice[1], currentRoom);
-	}
+    var uuid = turnInfo['uuid'];
+    playerTurn[currentRoom] = (1 + playerTurn[currentRoom]) % roomData[currentRoom].length;
+    io.sockets.in(currentRoom).emit("whoseTurn", playerTurn[currentRoom]);
+    var player = getPlayer(currentRoom, playerTurn[currentRoom]);
+    if (player.getCards().hasKnight()) {
+        //Ask them if they want to play the knight before the turn
+        //TODO
+        console.log(player.name, 'had knight to be able to use');
+        askIfUseKnight(playerTurn[currentRoom]);
+        handleMainTurnPhase(io, currentRoom);
+    } else {
+        handleMainTurnPhase(io, currentRoom);
+    }
 }
 
-function robberEvent(io, socket) {
+function askIfUseKnight(turn) {
+    socket.emit('ifUseKnight', turn);
+}
+
+function handleMainTurnPhase(io, currentRoom) {
+    console.log("Handle Begin Turn");
+    dice = getDiceRoll();
+    io.sockets.in(currentRoom).emit('dice', dice);
+    if (dice[0] + dice[1] == 7) {
+        console.log("ROBBER!!!");
+        robberEvent(io);
+    } else {
+        distributeCards(io, dice[0] + dice[1], currentRoom);
+    }
+}
+
+function robberEvent(io) {
 
 }
 
-function distributeCards(io, socket, dice, currentRoom) {
+function getPlayer(currentRoom, index) {
+    var roomDataIndex = roomData[currentRoom].map(i => i.getPlayerIndex()).indexOf(index);
+    return roomData[currentRoom][roomDataIndex];
+}
+
+function distributeCards(io, dice, currentRoom) {
 	//Emit to whole room the new cards that people have
     var hexagons = hexagonData[currentRoom];
     var vertices = vertexData[currentRoom];
@@ -505,13 +528,13 @@ function distributeCards(io, socket, dice, currentRoom) {
         if (hexagon.getDiceNumber() == dice) {
             hexagon.getVertices().forEach(function(vertexIndex) {
                 var vertex = vertices[vertexIndex];
-                if (vertex.getPlayerIndex(socket, currentRoom) != -1) { //Add cards to player card data
-                    playerCardData[currentRoom][vertex.getPlayerIndex()].addResourceAmount(hexagon.getResource(), vertex.getHouseType());
+                if (vertex.getPlayerIndex() != -1) { //Add cards to player card data
+                    getPlayer(currentRoom, vertex.getPlayerIndex()).getCards().addResourceAmount(hexagon.getResource(), vertex.getHouseType());
                 }
             });
         }
     });
-    io.sockets.in(currentRoom).emit('cards', playerCardData[currentRoom]);
+    io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(i => i.getCards()));
 }
 
 function getDiceRoll() {

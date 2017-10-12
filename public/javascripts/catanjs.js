@@ -1,4 +1,4 @@
-var scale = 1;
+    var scale = 1;
 var containerWidth = 900 * scale;
 var containerHeight = 600 * scale;
 var h = (Math.sqrt(3)/2);
@@ -42,16 +42,16 @@ $(document).ready(function() {
         createNumberCircleUi(serverData["hexagons"]);
         createRobberUi(serverData['hexagons']);
         createNumbersUi(serverData["hexagons"]);
-        createPlayerBoxesUi();
         createPlayerResourcesUi();
+        createPlayerBoxesUi(serverData['players']);
         createActionsUi();
         createPortsUi(serverData['ports']);
+        createDevCardUi();
 
         playerIndex = serverData["playerIndex"];
 
         addOnClickListenerToVertices(socket);
         addOnClickListenerToNumberCircles(socket); //Robber click
-        addOnClickListenerToEndTurn(socket);
     //     //moveCirclesInFrontOfText();   // Either this or make a event listener for the text.
         moveRobberToTheFront();
     });
@@ -66,76 +66,39 @@ $(document).ready(function() {
     handleShineCities(socket)
     handleBuyDevelopmentCard(socket);
     handleVictoryPointChange(socket);
+    handlePlayerJoin(socket);
+    handleWhoseTurn(socket);
 });
 
-function handleVictoryPointChange(socket) {
-    socket.on('victoryPoint', function(victoryPointInfo) {
-        var victoryPoints = svgContainer.selectAll('.victoryPoint')[0];
-        for (var index in victoryPointInfo) {
-            victoryPoints[parseInt(index)].innerHTML = "Victory Points: " + victoryPointInfo[parseInt(index)];
-        }
-    });
-}
+function createDevCardUi() {
+    var actions = ["Play Knight", "Play Road Building", "Play Monopoly", "Play Year of Plenty"];
+    var devCardMethods = [
+        playKnight,
+        playRoadBuilding,
+        playMonopoly,
+        playYearOfPlenty];
 
-function createPortsUi(ports) {
-    var vertices = svgContainer.selectAll('.vertexCircle')[0];
-    var portCircles = [];
-    for (var i = 0; i < ports.length; i++) {
-        var portIndex = ports[i];
-        var portIndex2 = ports[i+1];
-        if (i % 2 == 0) {
-            var x1 = parseInt(vertices[portIndex].attributes.cx.value);
-            var x2 = parseInt(vertices[portIndex2].attributes.cx.value);
-            var newX = (x1 + x2) / 2;
-
-            var y1 = parseInt(vertices[portIndex].attributes.cy.value);
-            var y2 = parseInt(vertices[portIndex2].attributes.cy.value);
-            var newY = (y1 + y2) / 2;
-            portCircles.push([newX, newY]);
-        }
-    };
-
-    svgContainer.selectAll('.portCircle').data(portCircles).enter()
-        .append('circle')
-        .attr('class', 'portCircle')
-        .attr('cx', function(d) {
-            return d[0];
-        })
-        .attr('cy', function(d) {
-            return d[1];
-        })
-        .attr('r', radius/4)
-        .attr('fill', 'pink')
-}
-
-function createActionsUi() {
-    var actions = ["Build Road", "Play Development Card", "Build City", "Build Settlement", "Buy Development Card", "End Turn"];
-    var actionMethods = [
-        shineRoads,
-        playDevelopmentCard,
-        shineCities,
-        shineSettlements,
-        buyDevelopmentCard,
-        addOnClickListenerToEndTurn];
-    svgContainer.selectAll(".action").data(actionMethods).enter()
+    svgContainer.selectAll(".devCardAction").data(devCardMethods).enter()
         .append('rect')
-        .attr('class', 'action')
-        .attr('x', .78 * containerWidth)
+        .attr('class', 'devCardAction')
+        .attr('x', .01 * containerWidth)
         .attr('y', function(d, i) {
-            return containerHeight/4 + i * containerHeight/12;
+            return containerHeight*3/10 + i * containerHeight/12;
         })
         .attr('width', containerWidth/5)
         .attr('height', containerHeight/12)
         .attr('fill', 'white')
         .attr("style", "outline: thin solid red;")
         .on("click", function(d, i) {
-            d(); //d is a reference to a function
+            if (this.attributes.fill.value == "white") {
+                d(); //d is a reference to a function
+            }
             d3.event.stopPropagation();
         });;
 
-    svgContainer.selectAll('.actionText').data(svgContainer.selectAll('.action')[0])
+    svgContainer.selectAll('.devCardText').data(svgContainer.selectAll('.devCardAction')[0])
         .enter().append("text")
-        .attr('class', 'actionText')
+        .attr('class', 'devCardText')
         .attr('x', function(d, i) {
             return parseInt(d.attributes.x.value) + radius / 2;
         })
@@ -149,143 +112,27 @@ function createActionsUi() {
         });
 }
 
-function shineRoads() {
-    socket.emit('shineRoads', playerIndex);
-}
-
-function playDevelopmentCard() {
+function playKnight() {
 
 }
 
-function shineCities() {
-    socket.emit('shineCities', playerIndex);
+function playRoadBuilding() {
+
 }
 
-function shineSettlements() {
-    socket.emit('shineSettlements', {'playerIndex': playerIndex, 'type': 0});
+function playMonopoly() {
+
 }
 
-function buyDevelopmentCard() {
-    socket.emit('buyDevCard', playerIndex);
+function playYearOfPlenty() {
+
 }
 
-function handleBuyDevelopmentCard(socket) {
-    socket.on('buyDevCard', function(devCardData) {
-        console.log(devCards[devCardData['devCardIndex']], devCardData['cardData']);
-        var playerCardData = devCardData['cardData'];
-        var playerIndex = playerCardData['playerIndex'];
-        var devCardIndex = devCardData['devCardIndex'];
-        var devCardCount = svgContainer.selectAll('.devCardCount')[0][playerIndex];
-        var sum = 0;
-        for (var i = 0; i < devCards.length; i++) {
-            var card = devCards[i];
-            sum += playerCardData.cardData[card];
-        }
-        devCardCount.innerHTML = "Dev Cards: " + sum;
-    })
+function comparePlayers(player1, player2) {
+    return player1.playerIndex < player2.playerIndex;
 }
 
-function handleShineCities(socket) {
-    socket.on('shineCities', function(shineCities) {
-        console.log("Shine Cities");
-        shineHouseLocations(socket, shineCities, 1);
-    });
-}
-
-function handleShineSettlements(socket) {
-    socket.on('shineSettlements', function(shineSettlements) {
-        shineHouseLocations(socket, shineSettlements, 0);
-    });
-}
-
-//Type will be 0 for settlements, 1 for town
-function shineHouseLocations(socket, shineSettlements, type) {
-    var vertices = svgContainer.selectAll('.vertexCircle')[0];
-    if (shineSettlements.length != 0 && vertices[shineSettlements[0]].attributes.fill.value == "white") {
-        shineSettlements.forEach(function(shineSettlementIndex) {
-            if (type == 1) { //If city, restore to player's color
-                vertices[shineSettlementIndex].attributes.fill.value = playerColors[playerIndex];
-            } else {
-                vertices[shineSettlementIndex].attributes.fill.value = "transparent";
-            }
-        });
-    } else {
-        addOnClickListenerToVertices(shineSettlements);
-        shineSettlements.forEach(function(shineSettlementIndex) {
-            vertices[shineSettlementIndex].attributes.fill.value = "white";
-        })
-    }
-}
-
-function handleShineRoads(socket) {
-    socket.on("shineRoads", function(shineRoads) {
-
-        var roads = svgContainer.selectAll('.road')[0];
-        if (shineRoads.length != 0 && roads[shineRoads[0]].attributes.stroke.value == "white") {
-            shineRoads.forEach(function(shineRoadIndex) {
-                roads[shineRoadIndex].attributes.stroke.value = "transparent";
-            });
-        } else {
-            addOnClickListenerToRoads(socket, shineRoads);
-            shineRoads.forEach(function(shineRoadIndex) {
-                roads[shineRoadIndex].attributes.stroke.value = "white";
-            });
-        }
-    })
-}
-
-function createPlayerResourcesUi() {
-    var resourceColors = hexagonColors.slice();
-    resourceColors.splice(5,1);
-    svgContainer.selectAll('.resource')
-        .data(resourceColors).enter()
-        .append('rect')
-        .attr('class', 'resource')
-        .attr('x', function(d, i) {
-            return containerWidth/5 + i*containerWidth/8
-        })
-        .attr('y', .85  * containerHeight)
-        .attr('width', containerWidth/12)
-        .attr('height', containerWidth/12)
-        .attr('fill', function(d, i) {
-            return d;
-        });
-
-    svgContainer.selectAll('.resourceText')
-        .data(svgContainer.selectAll('.resource')[0])
-        .enter().append('text')
-        .attr('class', 'resourceText')
-        .text(0)
-        .attr('font-size', (radius).toString()+"px")
-        .attr('fill', 'black')
-        .attr('x', function(d, i) {
-            return parseInt(d.attributes.x.value) + radius / 2;
-        })
-        .attr('y', function(d, i) {
-            return parseInt(d.attributes.y.value) + 1.1 * radius;
-        })
-}
-
-function handleCardDistribution(socket) {
-    socket.on('cards', function(cardData) {
-        var playerSquares = svgContainer.selectAll('.cardCount')[0];
-        var resourceText = svgContainer.selectAll('.resourceText')[0];
-        for (var key in cardData) {
-            var totalCards = 0;
-            resourceEntries.forEach(function(resource, i) {
-                totalCards += cardData[key].cardData[resource];
-
-                if (key == playerIndex) {
-                    resourceText[i].innerHTML = cardData[key].cardData[resource];
-                }
-
-            });
-            playerSquares[key].innerHTML = "Cards: " + totalCards;
-        }
-    });
-}
-
-function createPlayerBoxesUi() {
+function createPlayerBoxesUi(players) {
     var playerBoxWidth = containerWidth / 6;
     var playerBoxHeight = containerHeight / 6;
     var corners = [
@@ -294,15 +141,16 @@ function createPlayerBoxesUi() {
       [0, containerHeight - playerBoxHeight], //bottom left
       [containerWidth - playerBoxWidth, containerHeight - playerBoxHeight] //bottom right
     ];
+    players.sort(comparePlayers);
 
-    svgContainer.selectAll('.player').data(corners)
+    svgContainer.selectAll('.player').data(players)
         .enter().append("rect")
         .attr("class", "player")
         .attr("x", function(d, i) {
-            return d[0];
+            return corners[i][0];
         })
         .attr("y", function(d, i) {
-            return d[1];
+            return corners[i][1];
         })
         .attr("width", playerBoxWidth)
         .attr("height", playerBoxHeight)
@@ -345,7 +193,9 @@ function createPlayerBoxesUi() {
         .data(svgContainer.selectAll('.player')[0])
         .enter().append('text')
         .attr('class', 'victoryPoint')
-        .text('Victory Points: 0')
+        .text(function(d, i) {
+            return 'Victory Points: ' + players[i].victoryPoints;
+        })
         .attr('font-size', (radius/4).toString()+'px')
         .attr('fill', 'white')
         .attr('x', function(d, i) {
@@ -382,28 +232,170 @@ function createPlayerBoxesUi() {
         .attr('y', function(d, i) {
             return parseInt(d.attributes.y.value) + 5 * radius/4;
         })
+
+    svgContainer.selectAll('.name')
+        .data(svgContainer.selectAll('.player')[0])
+        .enter().append('text')
+        .attr('class', 'name')
+        .text(function(d, i) {
+            return 'Name: ' + players[i].name;
+        })
+        .attr('font-size', (radius/4).toString()+'px')
+        .attr('fill', 'white')
+        .attr('x', function(d, i) {
+            return parseInt(d.attributes.x.value) + 10;
+        })
+        .attr('y', function(d, i) {
+            return parseInt(d.attributes.y.value) + 6 * radius/4;
+        })
+
+    updateCardCountsUi(players.map(i => i.cards));
 }
 
-function handleDiceRoll(socket) {
-    socket.on('dice', function(diceInfo) {
-        var dice1 = document.getElementById("dice1");
-        var dice2 = document.getElementById("dice2");
-        dice1.src="dice-rolling-" + diceInfo[0].toString() + ".png";
-        dice2.src="dice-rolling-" + diceInfo[1].toString() + ".png";
-    });
+function createPortsUi(ports) {
+    var vertices = svgContainer.selectAll('.vertexCircle')[0];
+    var portCircles = [];
+    for (var i = 0; i < ports.length; i++) {
+        var portIndex = ports[i];
+        var portIndex2 = ports[i+1];
+        if (i % 2 == 0) {
+            var x1 = parseInt(vertices[portIndex].attributes.cx.value);
+            var x2 = parseInt(vertices[portIndex2].attributes.cx.value);
+            var newX = (x1 + x2) / 2;
+
+            var y1 = parseInt(vertices[portIndex].attributes.cy.value);
+            var y2 = parseInt(vertices[portIndex2].attributes.cy.value);
+            var newY = (y1 + y2) / 2;
+            portCircles.push([newX, newY]);
+        }
+    };
+
+    svgContainer.selectAll('.portCircle').data(portCircles).enter()
+        .append('circle')
+        .attr('class', 'portCircle')
+        .attr('cx', function(d) {
+            return d[0];
+        })
+        .attr('cy', function(d) {
+            return d[1];
+        })
+        .attr('r', radius/4)
+        .attr('fill', 'pink')
 }
 
-function addOnClickListenerToEndTurn() {
-    socket.emit("beginTurn", null);
+function createActionsUi() {
+    var actions = ["Build Road", "Play Development Card", "Build City", "Build Settlement", "Buy Development Card", "End Turn"];
+    var actionMethods = [
+        shineRoads,
+        shineCities,
+        shineSettlements,
+        buyDevelopmentCard,
+        beginNewTurn];
+    svgContainer.selectAll(".action").data(actionMethods).enter()
+        .append('rect')
+        .attr('class', 'action')
+        .attr('x', .78 * containerWidth)
+        .attr('y', function(d, i) {
+            return containerHeight*3/10 + i * containerHeight/12;
+        })
+        .attr('width', containerWidth/5)
+        .attr('height', containerHeight/12)
+        .attr('fill', 'white')
+        .attr("style", "outline: thin solid red;")
+        .on("click", function(d, i) {
+            if (this.attributes.fill.value == "white") {
+                d(); //d is a reference to a function
+            }
+            d3.event.stopPropagation();
+        });;
+
+    svgContainer.selectAll('.actionText').data(svgContainer.selectAll('.action')[0])
+        .enter().append("text")
+        .attr('class', 'actionText')
+        .attr('x', function(d, i) {
+            return parseInt(d.attributes.x.value) + radius / 2;
+        })
+        .attr('y', function(d, i) {
+            return parseInt(d.attributes.y.value) + radius / 2;
+        })
+        .attr('fill', 'black')
+        .attr('font-size', (radius/4).toString() + "px")
+        .text(function(d, i) {
+            return actions[i];
+        });
+
 }
 
-function handleRobberMovement(socket) {
-    socket.on("robberPlacement", function(robberInfo) {
-        var robby = svgContainer.selectAll("#robber")[0][0];
-        var hexCircle = svgContainer.selectAll('#numberCircle' + robberInfo["hexIndex"])[0][0];
-        robby.setAttribute("x", hexCircle.attributes.cx.value - 25);
-        robby.setAttribute("y", hexCircle.attributes.cy.value - 25);
-    });
+function shineRoads() {
+    socket.emit('shineRoads', {"playerIndex": playerIndex, "uuid": localStorage.getItem('catan_uuid')});
+}
+
+function shineCities() {
+    socket.emit('shineCities', {"playerIndex": playerIndex, "uuid": localStorage.getItem('catan_uuid')});
+}
+
+//Type is either beginning game or in game
+function shineSettlements() {
+    socket.emit('shineSettlements', {'playerIndex': playerIndex, 'type': 0, "uuid": localStorage.getItem('catan_uuid')});
+}
+
+function buyDevelopmentCard() {
+    socket.emit('buyDevCard', {"playerIndex": playerIndex, "uuid": localStorage.getItem('catan_uuid')});
+}
+
+//Type will be 0 for settlements, 1 for town
+function shineHouseLocations(socket, shineSettlements, type) {
+    var vertices = svgContainer.selectAll('.vertexCircle')[0];
+    if (shineSettlements.length != 0 && vertices[shineSettlements[0]].attributes.fill.value == "white") {
+        shineSettlements.forEach(function(shineSettlementIndex) {
+            if (type == 1) { //If city, restore to player's color
+                vertices[shineSettlementIndex].attributes.fill.value = playerColors[playerIndex];
+            } else {
+                vertices[shineSettlementIndex].attributes.fill.value = "transparent";
+            }
+        });
+    } else {
+        addOnClickListenerToVertices(shineSettlements);
+        shineSettlements.forEach(function(shineSettlementIndex) {
+            vertices[shineSettlementIndex].attributes.fill.value = "white";
+        })
+    }
+}
+
+function createPlayerResourcesUi() {
+    var resourceColors = hexagonColors.slice();
+    resourceColors.splice(5,1);
+    svgContainer.selectAll('.resource')
+        .data(resourceColors).enter()
+        .append('rect')
+        .attr('class', 'resource')
+        .attr('x', function(d, i) {
+            return containerWidth/5 + i*containerWidth/8
+        })
+        .attr('y', .85  * containerHeight)
+        .attr('width', containerWidth/12)
+        .attr('height', containerWidth/12)
+        .attr('fill', function(d, i) {
+            return d;
+        });
+
+    svgContainer.selectAll('.resourceText')
+        .data(svgContainer.selectAll('.resource')[0])
+        .enter().append('text')
+        .attr('class', 'resourceText')
+        .text(0)
+        .attr('font-size', (radius).toString()+"px")
+        .attr('fill', 'black')
+        .attr('x', function(d, i) {
+            return parseInt(d.attributes.x.value) + radius / 2;
+        })
+        .attr('y', function(d, i) {
+            return parseInt(d.attributes.y.value) + 1.1 * radius;
+        })
+}
+
+function beginNewTurn() {
+    socket.emit("beginTurn", {"data": null, "uuid": localStorage.getItem('catan_uuid')});
 }
 
 function moveRobberToTheFront() {
@@ -424,22 +416,10 @@ function addOnClickListenerToNumberCircles() {
                 robby.setAttribute("x", this.attributes.cx.value - 25);
                 robby.setAttribute("y", this.attributes.cy.value - 25);
 
-                socket.emit("robberPlacement", {"hexIndex": hexIndex});
+                socket.emit("robberPlacement", {"hexIndex": hexIndex, "uuid": localStorage.getItem('catan_uuid')});
             }, false);
         }());
     }
-}
-
-function handleHousePlacement(socket) {
-    socket.on("vertex", function(locationInfo) {
-        svgContainer.select("#vertex" + locationInfo["id"])[0][0].attributes.fill.value = playerColors[locationInfo["playerIndex"]];
-    });
-}
-
-function handleRoadEvent(socket) {
-    socket.on("road", function(roadInfo) {
-        svgContainer.select("#road" + roadInfo["id"])[0][0].attributes.stroke.value = playerColors[roadInfo["playerIndex"]];
-    });
 }
 
 function addOnClickListenerToRoads(socket, shineRoads) {
@@ -452,7 +432,7 @@ function addOnClickListenerToRoads(socket, shineRoads) {
                         if (this.attributes.stroke.value == "white") {
                             this.attributes.stroke.value = window.playerColors[playerIndex];
                             var id = parseInt(this.id.substring(this.id.indexOf('d') + 1));
-                            socket.emit("road", {"id": id}); //road+id
+                            socket.emit("road", {"id": id, "uuid": localStorage.getItem('catan_uuid')}); //road+id
 
                             roads.forEach(function(roadToReset) {
                                 if (roadToReset.attributes.stroke.value == "white") {
@@ -477,7 +457,7 @@ function addOnClickListenerToVertices(shineSpots) {
             circle.addEventListener("click", function() {
                 if (this.attributes.fill.value == "white") {
                     this.attributes.fill.value = window.playerColors[window.playerIndex];
-                    var locationInfo = {"id": parseInt(circle.id.substring(circle.id.indexOf('x') + 1))}; //vertex+id
+                    var locationInfo = {"id": parseInt(circle.id.substring(circle.id.indexOf('x') + 1)), "uuid": localStorage.getItem('catan_uuid')}; //vertex+id
                     socket.emit("vertex", locationInfo);
 
                     vertexCircles.forEach(function(vertexToReset) {
@@ -530,7 +510,6 @@ function createRobberUi(hexagons) {
 
 //Draw the hexagons
 function createHexagonsUi(hexagonServerData) {
-
     var points = [];
     hexagonServerData.forEach(function(hexagon) {
         points.push(hexagon.center);
@@ -557,30 +536,47 @@ function createHexagonsUi(hexagonServerData) {
 }
 
 function createVerticesUi(vertices) {
-    for (var i = 0; i < vertices.length; i++) {
-        var enterCircle = svgContainer.append('circle')
-            .attr('id', 'vertex' + i)
-            .attr('class', 'vertexCircle')
-            .attr('cx', vertices[i].x) //centers[i][0])
-            .attr('cy', vertices[i].y) //centers[i][1])
-            .attr('r', radius/3)
-            .attr('fill', "rgba(0,248,220,0)");
-    }
+    svgContainer.selectAll('.vertexCircle')
+        .data(vertices).enter().append('circle')
+        .attr('id', function (d, i) {
+            return 'vertex' + i;
+        })
+        .attr('class', 'vertexCircle')
+        .attr('cx', function(d) {
+            return d.x;
+        }) //centers[i][0])
+        .attr('cy', function(d) {
+            return d.y;
+        }) //centers[i][1])
+        .attr('r', radius/3)
+        .attr('fill', function(d, i) {
+            return d.playerIndex == -1 ? "rgba(0,248,220,0)" : playerColors[d.playerIndex];
+        });
 }
 
 function createRoadsUi(roads) {
-    // Draw the lines
-    for (var i = 0; i < roads.length; i++) {
-        var line = svgContainer.append("line")
-            .attr('class', 'road')
-            .attr('id', 'road' + i)
-            .attr("x1", roads[i].x1)
-            .attr("y1", roads[i].y1)
-            .attr("x2", roads[i].x2)
-            .attr("y2", roads[i].y2)
-            .attr("stroke-width", radius/12)
-            .attr("stroke", "transparent");
-    }
+    svgContainer.selectAll('.road')
+        .data(roads).enter().append('line')
+        .attr('class', 'road')
+        .attr('id', function(d, i) {
+            return 'road' + i;
+        })
+        .attr("x1", function(d) {
+            return d.x1;
+        })
+        .attr("x2", function(d) {
+            return d.x2;
+        })
+        .attr("y1", function(d) {
+            return d.y1;
+        })
+        .attr("y2", function(d) {
+            return d.y2;
+        })
+        .attr("stroke-width", radius/12)
+        .attr("stroke", function(d, i) {
+            return d.playerIndex == -1 ? "transparent" : playerColors[d.playerIndex];
+        });
 }
 
 //Add number to circle ui
@@ -611,5 +607,135 @@ function hexagon(radius) {
           dy = y1 - y0;
       x0 = x1, y0 = y1;
       return [dx, dy];
+    });
+}
+
+function handlePlayerJoin(socket) {
+    socket.on('newPlayer', function(players) {
+        createPlayerBoxesUi(players);
+    });
+}
+
+function handleHousePlacement(socket) {
+    socket.on("vertex", function(locationInfo) {
+        svgContainer.select("#vertex" + locationInfo["id"])[0][0].attributes.fill.value = playerColors[locationInfo["playerIndex"]];
+    });
+}
+
+function handleRoadEvent(socket) {
+    socket.on("road", function(roadInfo) {
+        svgContainer.select("#road" + roadInfo["id"])[0][0].attributes.stroke.value = playerColors[roadInfo["playerIndex"]];
+    });
+}
+
+function handleRobberMovement(socket) {
+    socket.on("robberPlacement", function(robberInfo) {
+        var robby = svgContainer.selectAll("#robber")[0][0];
+        var hexCircle = svgContainer.selectAll('#numberCircle' + robberInfo["hexIndex"])[0][0];
+        robby.setAttribute("x", hexCircle.attributes.cx.value - 25);
+        robby.setAttribute("y", hexCircle.attributes.cy.value - 25);
+    });
+}
+
+function handleVictoryPointChange(socket) {
+    socket.on('victoryPoint', function(victoryPointInfo) {
+        var victoryPoints = svgContainer.selectAll('.victoryPoint')[0];
+        for (var index in victoryPointInfo) {
+            victoryPoints[parseInt(index)].innerHTML = "Victory Points: " + victoryPointInfo[parseInt(index)];
+        }
+    });
+}
+
+function handleBuyDevelopmentCard(socket) {
+    socket.on('buyDevCard', function(devCardData) {
+        console.log(devCards[devCardData['devCardIndex']], devCardData['cardData']);
+        var playerCardData = devCardData['cardData'];
+        var playerIndex = playerCardData['playerIndex'];
+        var devCardIndex = devCardData['devCardIndex'];
+        var devCardCount = svgContainer.selectAll('.devCardCount')[0][playerIndex];
+        var sum = 0;
+        for (var i = 0; i < devCards.length; i++) {
+            var card = devCards[i];
+            sum += playerCardData.cardData[card];
+        }
+        devCardCount.innerHTML = "Dev Cards: " + sum;
+    })
+}
+
+function handleShineCities(socket) {
+    socket.on('shineCities', function(shineCities) {
+        shineHouseLocations(socket, shineCities, 1);
+    });
+}
+
+function handleShineSettlements(socket) {
+    socket.on('shineSettlements', function(shineSettlements) {
+        shineHouseLocations(socket, shineSettlements, 0);
+    });
+}
+
+function handleShineRoads(socket) {
+    socket.on("shineRoads", function(shineRoads) {
+
+        var roads = svgContainer.selectAll('.road')[0];
+        if (shineRoads.length != 0 && roads[shineRoads[0]].attributes.stroke.value == "white") {
+            shineRoads.forEach(function(shineRoadIndex) {
+                roads[shineRoadIndex].attributes.stroke.value = "transparent";
+            });
+        } else {
+            addOnClickListenerToRoads(socket, shineRoads);
+            shineRoads.forEach(function(shineRoadIndex) {
+                roads[shineRoadIndex].attributes.stroke.value = "white";
+            });
+        }
+    })
+}
+
+function handleCardDistribution(socket) {
+    socket.on('cards', function(cardData) {
+        updateCardCountsUi(cardData);
+        
+    });
+}
+
+function updateCardCountsUi(cardData) {
+    var playerSquares = svgContainer.selectAll('.cardCount')[0];
+    var resourceText = svgContainer.selectAll('.resourceText')[0];
+
+    for (var key in cardData) { //Get the correct card data index
+        var totalCards = 0;
+        resourceEntries.forEach(function(resource, i) { //For each dict of cards per player
+            totalCards += cardData[key].cardData[resource];
+            if (cardData[key].playerIndex == playerIndex) {
+                resourceText[i].innerHTML = cardData[key].cardData[resource];
+            }
+        });
+        playerSquares[key].innerHTML = "Cards: " + totalCards;
+    }
+}
+
+function handleDiceRoll(socket) {
+    socket.on('dice', function(diceInfo) {
+        var dice1 = document.getElementById("dice1");
+        var dice2 = document.getElementById("dice2");
+        dice1.src="dice-rolling-" + diceInfo[0].toString() + ".png";
+        dice2.src="dice-rolling-" + diceInfo[1].toString() + ".png";
+    });
+}
+
+function handleWhoseTurn(socket) {
+    socket.on('whoseTurn', function(turn) {
+        svgContainer.selectAll(".action")[0].forEach(function(boxUi) {
+            if (turn == playerIndex) {
+                boxUi.attributes.fill.value = "white"
+            } else {
+                boxUi.attributes.fill.value = "grey"
+            }
+        });
+
+        svgContainer.selectAll('.player').data(svgContainer.selectAll('.player')[0])
+            .attr('fill-opacity', function(d, i) {
+                return turn == i ? 1 : 0.5;
+            });
     });
 }
