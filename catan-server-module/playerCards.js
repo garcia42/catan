@@ -29,13 +29,52 @@ class PlayerCards {
 		}
 	}
 
-	hasMoreThanSeven() {
+	monopolyResource(resourceIndex) {
+		var amountToSteal = this.getResourceAmount(resourceIndex);
+		this.subtractResourceAmount(resourceIndex, this.getResourceAmount(resourceIndex));
+		return amountToSteal;
+	}
+
+	getTotalCards() {
 		var resources = [0,1,2,3,4];
 		var count = 0;
-		resources.forEach(function(resource) {
-			count += this.getResourceAmount(resource);
-		});
-		return count > 7;
+		for (var i in resources) {
+			count += this.getResourceAmount(resources[i]);
+		}
+		return count;
+	}
+
+	hasMoreThanSeven() {
+		return this.getTotalCards() > 7;
+	}
+
+	yearOfPlenty(resources) {
+		for (var i in resources) {
+			this.addResourceAmount(resources[i], 1);
+		}
+	}
+
+	rob() {
+		if (this.getTotalCards() == 0) {
+			return -1;
+		}
+		var random = Math.floor(Math.random()* this.getTotalCards());
+		var index = 0;
+	    while (random >= 0 && index < 5) {
+	        if (random - this.getResourceAmount(index) > 0) {
+	            random -= this.getResourceAmount(index);
+			} else if (this.getResourceAmount(index) > 0) {
+				this.subtractResourceAmount(index, 1);
+				return index;
+			}
+	        index ++;
+	    }
+	}
+
+	robbered(cards) {
+		for (var i in cards) {
+			this.subtractResourceAmount(cards[i], 1);
+		}
 	}
 
 	canBuyDevelopmentCard() {

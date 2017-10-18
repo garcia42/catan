@@ -111,6 +111,7 @@ class Vertex {
 		if (this.houseType > 2) {
 			console.log("Error: Housetype of vertex greater than 2, vertexId: " + this.getId());
 		}
+		return this.houseType;
 	}
 }
 

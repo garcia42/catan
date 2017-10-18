@@ -1,4 +1,4 @@
-    var scale = 1;
+var scale = 1;
 var containerWidth = 900 * scale;
 var containerHeight = 600 * scale;
 var h = (Math.sqrt(3)/2);
@@ -9,7 +9,6 @@ var svgContainer =
       .append("svg")
       .attr("width", containerWidth)
       .attr("height", containerHeight);
-
 /*rsc = {
     0: WOOD 
     1: CLAY,
@@ -19,12 +18,27 @@ var svgContainer =
     5: DESERT
 } */
 var resourceEntries = ["wood", "brick", "sheep", "wheat", "ore"];
-var hexagonColors = ["rgba(0,102,0,0.4)", "rgba(255,0,0,0.4)", "rgba(0,255,0,0.4)", "rgba(255,255,0,0.4)", "rgba(96,96,96,0.4)", "rgba(255,255,204,0.4)"];
+var portColors = ["rgba(0,102,0,1)", "rgba(255,0,0,1)", "rgba(0,255,0,1)", "rgba(255,255,0,1)", "rgba(96,96,96,1)", "rgba(255,255,204,1)"];
+var hexagonColors = ["rgba(0,102,0,0.5)", "rgba(255,0,0,0.5)", "rgba(0,255,0,0.5)", "rgba(255,255,0,0.5)", "rgba(96,96,96,0.5)", "rgba(255,255,204,0.5)"];
 var playerColors = ["red", "blue", "purple", "green"];
-var devCards = ['Knight', 'Victory point', 'Road building', 'Monopoly', 'Year of plenty'];
+var devCards = ['Knight', 'Road building', 'Monopoly', 'Year of plenty', 'Victory point'];
 
 var playerIndex = 0;
 var playerTurn = 0;
+
+/*currentAction = {
+    -1: no action
+    0: knight 
+    1: road building,
+    2: monopoly,
+    3: year of plenty,
+    4: robber,
+} */
+var currentAction = -1;
+var resourcesPicked = []; //Used for year of plenty
+var resourcesToSteal = 0;
+var roadBuildingCount = 0;
+var blinkingHouses = [];
 
 $(document).ready(function() {
 
@@ -40,18 +54,18 @@ $(document).ready(function() {
         createVerticesUi(serverData["vertices"]);
         createRoadsUi(serverData["roads"]);
         createNumberCircleUi(serverData["hexagons"]);
-        createRobberUi(serverData['hexagons']);
+        createRobberUi(serverData['hexagons'], serverData['robber']);
         createNumbersUi(serverData["hexagons"]);
-        createPlayerResourcesUi();
+        createPlayerResourcesUi(serverData['players'].map(p => p.cards).filter(cD => cD.playerIndex == playerIndex)[0]);
         createPlayerBoxesUi(serverData['players']);
         createActionsUi();
         createPortsUi(serverData['ports']);
-        createDevCardUi();
+        createDevCardUi(serverData['players'].map(p => p.cards).filter(cD => cD.playerIndex == playerIndex)[0]);
 
         playerIndex = serverData["playerIndex"];
 
-        addOnClickListenerToVertices(socket);
         addOnClickListenerToNumberCircles(socket); //Robber click
+        addOnClickListenerToResources(socket);
     //     //moveCirclesInFrontOfText();   // Either this or make a event listener for the text.
         moveRobberToTheFront();
     });
@@ -64,20 +78,86 @@ $(document).ready(function() {
     handleShineRoads(socket);
     handleShineSettlements(socket);
     handleShineCities(socket)
-    handleBuyDevelopmentCard(socket);
     handleVictoryPointChange(socket);
     handlePlayerJoin(socket);
     handleWhoseTurn(socket);
+    handleShineRobberSettlements(socket);
+    handleSevenDeadlySins(socket);
 });
 
-function createDevCardUi() {
-    var actions = ["Play Knight", "Play Road Building", "Play Monopoly", "Play Year of Plenty"];
+function handleSevenDeadlySins(socket) {
+    socket.on('7deadlySins', function(cardData) {
+        var numResources = getNumberOfResources(cardData, playerIndex);
+        if (numResources > 7) {
+            console.log('being robbered');
+            makeEdgesBlinkResource();
+            resourcesToSteal = Math.floor(numResources / 2);
+            currentAction = 4; //Robber time!
+        } else {
+            console.log('not rich enough to get stole from')
+            socket.emit('resumeGame', {'uuid': localStorage.getItem('catan_uuid'), 'cards': null});
+        }
+    });
+}
+
+function addOnClickListenerToResources() {
+    var resources = svgContainer.selectAll(".resource")[0];
+    for (var i = 0; i < resources.length; i++) {
+        (function() {
+            var resourceIndex = i;
+            resources[i].addEventListener("click", function() {
+                var resourceAmount = parseInt(window.svgContainer.selectAll('.resourceText')[0][resourceIndex].innerHTML);
+                if (currentAction == 2) { //Monopoly
+                    socket.emit("monopoly", {"resource": resourceIndex, "uuid": localStorage.getItem('catan_uuid')});
+                    d3.selectAll('.resource').transition().duration(1000).style("stroke", "rgb(0,0,0)");
+                    currentAction = -1;
+                    window.svgContainer.selectAll('.devCardAction')[0][2].attributes.fill.value = "white";
+                    return;
+                }
+
+                if (window.currentAction == 3) { //Year of Plenty
+                    window.resourcesPicked.push(resourceIndex);
+                    console.log('year of plenty', window.resourcesPicked);
+                    window.svgContainer.selectAll('.resourceText')[0][resourceIndex].innerHTML = resourceAmount + 1;
+                    if (window.resourcesPicked.length == 2) {
+                        socket.emit('yearOfPlenty', {"uuid": localStorage.getItem('catan_uuid'), "resources": window.resourcesPicked});
+                        window.resourcesPicked = [];
+                        window.svgContainer.selectAll('.resource').transition().duration(1000).style("stroke", "rgb(0,0,0)");
+                        window.svgContainer.selectAll('.devCardAction')[0][3].attributes.fill.value = "white";
+                        window.currentAction = -1;
+                    }
+                }
+
+                if (currentAction == 4 && resourcesToSteal > 0 && resourceAmount > 0) {
+                    window.resourcesPicked.push(resourceIndex);
+                    window.svgContainer.selectAll('.resourceText')[0][resourceIndex].innerHTML = resourceAmount - 1;
+                    console.log('robbered resources', window.resourcesPicked);
+                    window.resourcesToSteal -= 1;
+
+                    if (window.resourcesToSteal == 0) {
+                        socket.emit('resumeGame', {'uuid': localStorage.getItem('catan_uuid'), 'cards': window.resourcesPicked});
+                        window.resourcesPicked = [];
+                        window.resourcesToSteal = 0;
+                        window.currentAction = -1;
+                        window.svgContainer.selectAll('.resource').transition().duration(1000).style("stroke", "rgb(0,0,0)");
+                    }
+                }
+            }, false);
+        }());
+    }
+}
+
+function createDevCardUi(cardData) {
+    var actions = ["Play Knight", "Play Road Building", "Play Monopoly", "Play Year of Plenty", "Victory Points"];
+
     var devCardMethods = [
         playKnight,
         playRoadBuilding,
         playMonopoly,
-        playYearOfPlenty];
+        playYearOfPlenty,
+        doNothing];
 
+    console.log('createDevCardUi', cardData);
     svgContainer.selectAll(".devCardAction").data(devCardMethods).enter()
         .append('rect')
         .attr('class', 'devCardAction')
@@ -90,12 +170,13 @@ function createDevCardUi() {
         .attr('fill', 'white')
         .attr("style", "outline: thin solid red;")
         .on("click", function(d, i) {
-            if (this.attributes.fill.value == "white") {
+            if (this.attributes.fill.value == "white" && currentAction < 0) {
                 d(); //d is a reference to a function
             }
             d3.event.stopPropagation();
         });;
 
+    svgContainer.selectAll(".devCardText").remove();
     svgContainer.selectAll('.devCardText').data(svgContainer.selectAll('.devCardAction')[0])
         .enter().append("text")
         .attr('class', 'devCardText')
@@ -108,28 +189,103 @@ function createDevCardUi() {
         .attr('fill', 'black')
         .attr('font-size', (radius/4).toString() + "px")
         .text(function(d, i) {
-            return actions[i];
+            return actions[i] + " -- " + cardData['cardData'][devCards[i]];
         });
 }
 
-function playKnight() {
+function doNothing() {
+    return;
+}
 
+function playKnight() {
+    if (svgContainer.selectAll('.devCardText')[0][0].innerHTML.indexOf(' 0') == -1) {
+        svgContainer.selectAll('.devCardAction')[0][0].attributes.fill.value = "red";
+        currentAction = 0;
+        makeEdgesBlinkRobber('#robber');
+    }
 }
 
 function playRoadBuilding() {
-
+    currentAction = 1;
+    svgContainer.selectAll('.devCardAction')[0][1].attributes.fill.value = "red";
+    console.log('road building');
+    shineRoads("road building");
 }
 
 function playMonopoly() {
-
+    svgContainer.selectAll('.devCardAction')[0][2].attributes.fill.value = "red";
+    currentAction = 2;
+    makeEdgesBlinkResource();
 }
 
 function playYearOfPlenty() {
+    svgContainer.selectAll('.devCardAction')[0][3].attributes.fill.value = "red";
+    currentAction = 3;
+    makeEdgesBlinkResource();
+}
 
+function makeEdgesBlinkResource() {
+    d3.selectAll('.resource')
+    .transition()
+    .duration(1000)
+    .style("stroke", "rgb(255,255,255)")
+    .transition()
+    .duration(1000)
+    .style("stroke", "rgb(0,0,0)")
+    .each('end', makeEdgesBlinkResource);
+}
+
+function makeEdgesBlinkRobber() {
+    d3.selectAll('#robber')
+    .transition()
+    .duration(1000)
+    .style("stroke", "rgb(255,255,255)")
+    .transition()
+    .duration(1000)
+    .style("stroke", "rgb(0,0,0)")
+    .each('end', makeEdgesBlinkRobber);
 }
 
 function comparePlayers(player1, player2) {
     return player1.playerIndex < player2.playerIndex;
+}
+
+function createCardCountsUi(cardData) {
+
+    svgContainer.selectAll('.cardCount').remove();
+    svgContainer.selectAll('.cardCount')
+        .data(svgContainer.selectAll('.player')[0])
+        .enter().append('text')
+        .attr('class', 'cardCount')
+        .text(function(d, i) {
+            return 'Cards: ' + getNumberOfResources(cardData, i)
+        })
+        .attr('font-size', (radius/4).toString()+"px")
+        .attr('fill', 'white')
+        .attr('x', function(d, i) {
+            return parseInt(d.attributes.x.value) + radius/5;
+        })
+        .attr('y', function(d, i) {
+            return parseInt(d.attributes.y.value) + radius/4;
+        })
+
+    console.log('createCardCountsUi', cardData);
+    svgContainer.selectAll('.devCardCount').remove();
+    svgContainer.selectAll('.devCardCount')
+        .data(svgContainer.selectAll('.player')[0])
+        .enter().append('text')
+        .attr('class', 'devCardCount')
+        .text(function(d, i) {
+            return 'Dev Cards: ' + getNumberOfDevCards(cardData, i)
+        })
+        .attr('font-size', (radius/4).toString()+"px")
+        .attr('fill', 'white')
+        .attr('x', function(d, i) {
+            return parseInt(d.attributes.x.value) + 10;
+        })
+        .attr('y', function(d, i) {
+            return parseInt(d.attributes.y.value) + 2 * radius/4;
+        })
 }
 
 function createPlayerBoxesUi(players) {
@@ -161,34 +317,9 @@ function createPlayerBoxesUi(players) {
             return 'player'+ i;
         });
 
-    svgContainer.selectAll('.cardCount')
-        .data(svgContainer.selectAll('.player')[0])
-        .enter().append('text')
-        .attr('class', 'cardCount')
-        .text('Cards: 0')
-        .attr('font-size', (radius/4).toString()+"px")
-        .attr('fill', 'white')
-        .attr('x', function(d, i) {
-            return parseInt(d.attributes.x.value) + radius/5;
-        })
-        .attr('y', function(d, i) {
-            return parseInt(d.attributes.y.value) + radius/4;
-        })
+    createCardCountsUi(players.map(p => p.cards));
 
-    svgContainer.selectAll('.devCardCount')
-        .data(svgContainer.selectAll('.player')[0])
-        .enter().append('text')
-        .attr('class', 'devCardCount')
-        .text('Dev Cards: 0')
-        .attr('font-size', (radius/4).toString()+"px")
-        .attr('fill', 'white')
-        .attr('x', function(d, i) {
-            return parseInt(d.attributes.x.value) + 10;
-        })
-        .attr('y', function(d, i) {
-            return parseInt(d.attributes.y.value) + 2 * radius/4;
-        })
-
+    svgContainer.selectAll('.victoryPoint').remove();
     svgContainer.selectAll('.victoryPoint')
         .data(svgContainer.selectAll('.player')[0])
         .enter().append('text')
@@ -205,19 +336,22 @@ function createPlayerBoxesUi(players) {
             return parseInt(d.attributes.y.value) + 3 * radius/4;
         })
 
+    svgContainer.selectAll('.knightsUsed').remove();
     svgContainer.selectAll('.knightsUsed')
-        .data(svgContainer.selectAll('.player')[0])
-        .enter().append('text')
-        .attr('class', 'knightsUsed')
-        .text('Knights Used: 0')
-        .attr('font-size', (radius/4).toString()+'px')
-        .attr('fill', 'white')
-        .attr('x', function(d, i) {
-            return parseInt(d.attributes.x.value) + 10;
-        })
-        .attr('y', function(d, i) {
-            return parseInt(d.attributes.y.value) + 4 * radius/4;
-        })
+    .data(svgContainer.selectAll('.player')[0])
+    .enter().append('text')
+    .attr('class', 'knightsUsed')
+    .text(function(d, i) {
+        return 'Knights Used: ' + players[i].knightsUsed;
+    })
+    .attr('font-size', (radius/4).toString()+'px')
+    .attr('fill', 'white')
+    .attr('x', function(d, i) {
+        return parseInt(d.attributes.x.value) + 10;
+    })
+    .attr('y', function(d, i) {
+        return parseInt(d.attributes.y.value) + 4 * radius/4;
+    })
 
     svgContainer.selectAll('.longestRoad')
         .data(svgContainer.selectAll('.player')[0])
@@ -233,6 +367,7 @@ function createPlayerBoxesUi(players) {
             return parseInt(d.attributes.y.value) + 5 * radius/4;
         })
 
+    svgContainer.selectAll('.name').remove();
     svgContainer.selectAll('.name')
         .data(svgContainer.selectAll('.player')[0])
         .enter().append('text')
@@ -249,27 +384,26 @@ function createPlayerBoxesUi(players) {
             return parseInt(d.attributes.y.value) + 6 * radius/4;
         })
 
-    updateCardCountsUi(players.map(i => i.cards));
+    // updateCardCountsUi(players.map(i => i.cards));
 }
 
 function createPortsUi(ports) {
     var vertices = svgContainer.selectAll('.vertexCircle')[0];
     var portCircles = [];
     for (var i = 0; i < ports.length; i++) {
-        var portIndex = ports[i];
-        var portIndex2 = ports[i+1];
-        if (i % 2 == 0) {
-            var x1 = parseInt(vertices[portIndex].attributes.cx.value);
-            var x2 = parseInt(vertices[portIndex2].attributes.cx.value);
-            var newX = (x1 + x2) / 2;
+        var portIndex = ports[i].v1;
+        var portIndex2 = ports[i].v2;
+        var x1 = parseInt(vertices[portIndex].attributes.cx.value);
+        var x2 = parseInt(vertices[portIndex2].attributes.cx.value);
+        var newX = (x1 + x2) / 2;
 
-            var y1 = parseInt(vertices[portIndex].attributes.cy.value);
-            var y2 = parseInt(vertices[portIndex2].attributes.cy.value);
-            var newY = (y1 + y2) / 2;
-            portCircles.push([newX, newY]);
-        }
-    };
+        var y1 = parseInt(vertices[portIndex].attributes.cy.value);
+        var y2 = parseInt(vertices[portIndex2].attributes.cy.value);
+        var newY = (y1 + y2) / 2;
+        portCircles.push([newX, newY]);
+    };  
 
+    console.log(ports);
     svgContainer.selectAll('.portCircle').data(portCircles).enter()
         .append('circle')
         .attr('class', 'portCircle')
@@ -279,17 +413,21 @@ function createPortsUi(ports) {
         .attr('cy', function(d) {
             return d[1];
         })
+        .style("stroke", "rgb(0,0,0)")
         .attr('r', radius/4)
-        .attr('fill', 'pink')
+        .attr('fill', function(d, i) {
+            return window.portColors[ports[i].resource];
+        })
 }
 
 function createActionsUi() {
-    var actions = ["Build Road", "Play Development Card", "Build City", "Build Settlement", "Buy Development Card", "End Turn"];
+    var actions = ["Build Road", "Build City", "Build Settlement", "Buy Development Card", "Trade", "End Turn"];
     var actionMethods = [
         shineRoads,
         shineCities,
         shineSettlements,
         buyDevelopmentCard,
+        openTradeWindow,
         beginNewTurn];
     svgContainer.selectAll(".action").data(actionMethods).enter()
         .append('rect')
@@ -303,7 +441,7 @@ function createActionsUi() {
         .attr('fill', 'white')
         .attr("style", "outline: thin solid red;")
         .on("click", function(d, i) {
-            if (this.attributes.fill.value == "white") {
+            if (this.attributes.fill.value == "white" && currentAction < 0) {
                 d(); //d is a reference to a function
             }
             d3.event.stopPropagation();
@@ -323,11 +461,15 @@ function createActionsUi() {
         .text(function(d, i) {
             return actions[i];
         });
+}
+
+function openTradeWindow() {
 
 }
 
-function shineRoads() {
-    socket.emit('shineRoads', {"playerIndex": playerIndex, "uuid": localStorage.getItem('catan_uuid')});
+//Type will be "road building" if it's for the intial road building, null else
+function shineRoads(type) {
+    socket.emit('shineRoads', {"playerIndex": playerIndex, "uuid": localStorage.getItem('catan_uuid'), "type": type});
 }
 
 function shineCities() {
@@ -343,10 +485,10 @@ function buyDevelopmentCard() {
     socket.emit('buyDevCard', {"playerIndex": playerIndex, "uuid": localStorage.getItem('catan_uuid')});
 }
 
-//Type will be 0 for settlements, 1 for town
+//Type will be 0 for settlements, 1 for town, 2 for robbered locations
 function shineHouseLocations(socket, shineSettlements, type) {
     var vertices = svgContainer.selectAll('.vertexCircle')[0];
-    if (shineSettlements.length != 0 && vertices[shineSettlements[0]].attributes.fill.value == "white") {
+    if (shineSettlements.length != 0 && vertices[shineSettlements[0]].attributes.fill.value == "white") { //Already white Turn off shine cities
         shineSettlements.forEach(function(shineSettlementIndex) {
             if (type == 1) { //If city, restore to player's color
                 vertices[shineSettlementIndex].attributes.fill.value = playerColors[playerIndex];
@@ -354,15 +496,62 @@ function shineHouseLocations(socket, shineSettlements, type) {
                 vertices[shineSettlementIndex].attributes.fill.value = "transparent";
             }
         });
-    } else {
+    } else { //Turning on shine location
         addOnClickListenerToVertices(shineSettlements);
-        shineSettlements.forEach(function(shineSettlementIndex) {
-            vertices[shineSettlementIndex].attributes.fill.value = "white";
-        })
+        if (type == 2) {
+            window.blinkingHouses = shineSettlements.slice();
+            makeEdgesBlinkHouses();
+        } else {
+            shineSettlements.forEach(function(shineSettlementIndex) {
+                vertices[shineSettlementIndex].attributes.fill.value = "white";
+            });
+        }
     }
 }
 
-function createPlayerResourcesUi() {
+function makeEdgesBlinkHouses() {
+
+    d3.selectAll('.vertexCircle')
+    .filter(function(d, i) { return window.blinkingHouses.indexOf(i) != -1 })
+    .style("stroke-width", "5px")
+    .transition()
+    .duration(500)
+    .style("stroke", "rgb(255,255,255)")
+    .transition()
+    .duration(500)
+    .style("stroke", "rgb(0,0,0)")
+    .each('end', makeEdgesBlinkHouses);
+}
+
+function handleCardDistribution(socket) {
+    socket.on('cards', function(cardData) {
+        createCardCountsUi(cardData);
+        createPlayerResourcesUi(cardData.filter(cD => cD.playerIndex == window.playerIndex)[0]);
+        console.log('createDevCardUi', cardData);
+        createDevCardUi(cardData.filter(cD => cD.playerIndex == window.playerIndex)[0]);
+    });
+}
+
+function getNumberOfDevCards(cardData, key) {
+
+    console.log('number of dev cards', cardData);
+    var totalCards = 0;
+    devCards.forEach(function(resource, i) { //For each dict of cards per player
+        totalCards += cardData[key].cardData[resource];
+    });
+    return totalCards;
+}
+
+function getNumberOfResources(cardData, key) {
+    var totalCards = 0;
+    resourceEntries.forEach(function(resource, i) { //For each dict of cards per player
+        totalCards += cardData[key].cardData[resource];
+    });
+    return totalCards;
+}
+
+function createPlayerResourcesUi(cardData) {
+
     var resourceColors = hexagonColors.slice();
     resourceColors.splice(5,1);
     svgContainer.selectAll('.resource')
@@ -375,15 +564,20 @@ function createPlayerResourcesUi() {
         .attr('y', .85  * containerHeight)
         .attr('width', containerWidth/12)
         .attr('height', containerWidth/12)
+        .style("stroke", "rgb(0,0,0)")
+        .attr("stroke-width", "3px")
         .attr('fill', function(d, i) {
             return d;
         });
 
+    svgContainer.selectAll('.resourceText').remove();
     svgContainer.selectAll('.resourceText')
         .data(svgContainer.selectAll('.resource')[0])
         .enter().append('text')
         .attr('class', 'resourceText')
-        .text(0)
+        .text(function(d, i) {
+            return cardData['cardData'][resourceEntries[i]];
+        })
         .attr('font-size', (radius).toString()+"px")
         .attr('fill', 'black')
         .attr('x', function(d, i) {
@@ -412,11 +606,13 @@ function addOnClickListenerToNumberCircles() {
             var hexIndex = i;
             circles[i].addEventListener("click", function() {
 
-                var robby = svgContainer.select("#robber")[0][0];
-                robby.setAttribute("x", this.attributes.cx.value - 25);
-                robby.setAttribute("y", this.attributes.cy.value - 25);
+                if (currentAction == 0) {
+                    var robby = svgContainer.select("#robber")[0][0];
+                    robby.setAttribute("x", this.attributes.cx.value - 25);
+                    robby.setAttribute("y", this.attributes.cy.value - 25);
 
-                socket.emit("robberPlacement", {"hexIndex": hexIndex, "uuid": localStorage.getItem('catan_uuid')});
+                    socket.emit("robberPlacement", {"hexIndex": hexIndex, "uuid": localStorage.getItem('catan_uuid')});
+                }
             }, false);
         }());
     }
@@ -433,6 +629,15 @@ function addOnClickListenerToRoads(socket, shineRoads) {
                             this.attributes.stroke.value = window.playerColors[playerIndex];
                             var id = parseInt(this.id.substring(this.id.indexOf('d') + 1));
                             socket.emit("road", {"id": id, "uuid": localStorage.getItem('catan_uuid')}); //road+id
+
+                            if (window.currentAction == 1) { //Road Building
+                                window.roadBuildingCount += 1;
+                                if (window.roadBuildingCount == 2) { //Second Road
+                                    window.currentAction = -1;
+                                    window.roadBuildingCount = 0;
+                                    window.svgContainer.selectAll('.devCardAction')[0][1].attributes.fill.value = "white";
+                                }
+                            }
 
                             roads.forEach(function(roadToReset) {
                                 if (roadToReset.attributes.stroke.value == "white") {
@@ -455,10 +660,18 @@ function addOnClickListenerToVertices(shineSpots) {
         (function () {
             var circle = vertexCircles[i];
             circle.addEventListener("click", function() {
-                if (this.attributes.fill.value == "white") {
-                    this.attributes.fill.value = window.playerColors[window.playerIndex];
-                    var locationInfo = {"id": parseInt(circle.id.substring(circle.id.indexOf('x') + 1)), "uuid": localStorage.getItem('catan_uuid')}; //vertex+id
-                    socket.emit("vertex", locationInfo);
+                var vertexId = parseInt(circle.id.substring(circle.id.indexOf('x') + 1));
+                if (this.attributes.fill.value == "white" || window.blinkingHouses.indexOf(vertexId) != -1) {
+                    var locationInfo = {"id": vertexId, "uuid": localStorage.getItem('catan_uuid')}; //vertex+id
+                    if (currentAction == 0) { //Robber
+                        socket.emit("robberEvent", locationInfo);
+                        currentAction = -1;
+                        window.svgContainer.selectAll('.devCardAction')[0][0].attributes.fill.value = "white";
+                        window.blinkingHouses = [];
+                        window.svgContainer.selectAll('.vertexCircle').transition().duration(1000).style("stroke-width", "0px");
+                    } else { // Building location
+                        socket.emit('vertex', locationInfo); //Don't update the house shape here, do it on callback
+                    }
 
                     vertexCircles.forEach(function(vertexToReset) {
                         if (vertexToReset.attributes.fill.value == "white") {
@@ -490,18 +703,13 @@ function createNumberCircleUi(hexagons) {
         });
 }
 
-function createRobberUi(hexagons) {
-
-    var robberIndex = -1;
-    hexagons.forEach(function(hexagon, i) {
-        if (hexagon.resourceIndex == 5) {
-            robberIndex = i;
-        }
-    });
+function createRobberUi(hexagons, robberIndex) {
 
     var robier = svgContainer.append('rect')
         .attr('x', hexagons[robberIndex].center[0] - radius/2)
         .attr('y', hexagons[robberIndex].center[1] -radius/2)
+        .style("stroke", "rgb(0,0,0)")
+        .attr("stroke-width", "3px")
         .attr('id', 'robber')
         .attr('width', radius)
         .attr('height', radius)
@@ -612,19 +820,43 @@ function hexagon(radius) {
 
 function handlePlayerJoin(socket) {
     socket.on('newPlayer', function(players) {
+        console.log('new Player');
         createPlayerBoxesUi(players);
+        createDevCardUi(players.map(p => p.cards).filter(cD => cD.playerIndex == playerIndex)[0]);
     });
 }
 
 function handleHousePlacement(socket) {
-    socket.on("vertex", function(locationInfo) {
-        svgContainer.select("#vertex" + locationInfo["id"])[0][0].attributes.fill.value = playerColors[locationInfo["playerIndex"]];
+    socket.on('vertex', function(locationInfo) {
+        var oldCircle = svgContainer.select("#vertex" + locationInfo["id"]);
+        if (locationInfo['type'] == 2) { //City make it a new shape
+                svgContainer.selectAll("#city" +locationInfo['id']).data(oldCircle[0]).enter()
+                    .append('rect')
+                    .attr('class', 'city')
+                    .attr('x', function(d) {
+                        return d.attributes.cx.value - d.attributes.r.value;
+                    })
+                    .attr('y', function(d, i) {
+                        return d.attributes.cy.value - d.attributes.r.value;
+                    })
+                    .attr('width', radius/1.5)
+                    .attr('height', radius/1.5)
+                    .attr('fill', function(d) {
+                        return playerColors[locationInfo['playerIndex']];
+                    })
+        } else {
+            svgContainer.select("#vertex" + locationInfo["id"])[0][0].attributes.fill.value = playerColors[locationInfo["playerIndex"]];
+        }
     });
 }
 
 function handleRoadEvent(socket) {
     socket.on("road", function(roadInfo) {
         svgContainer.select("#road" + roadInfo["id"])[0][0].attributes.stroke.value = playerColors[roadInfo["playerIndex"]];
+
+        if (currentAction == 1 && roadInfo['uuid'] == localStorage.catan_uuid) { //Still in RoadBuilding shine roads again
+            shineRoads();
+        }
     });
 }
 
@@ -646,22 +878,6 @@ function handleVictoryPointChange(socket) {
     });
 }
 
-function handleBuyDevelopmentCard(socket) {
-    socket.on('buyDevCard', function(devCardData) {
-        console.log(devCards[devCardData['devCardIndex']], devCardData['cardData']);
-        var playerCardData = devCardData['cardData'];
-        var playerIndex = playerCardData['playerIndex'];
-        var devCardIndex = devCardData['devCardIndex'];
-        var devCardCount = svgContainer.selectAll('.devCardCount')[0][playerIndex];
-        var sum = 0;
-        for (var i = 0; i < devCards.length; i++) {
-            var card = devCards[i];
-            sum += playerCardData.cardData[card];
-        }
-        devCardCount.innerHTML = "Dev Cards: " + sum;
-    })
-}
-
 function handleShineCities(socket) {
     socket.on('shineCities', function(shineCities) {
         shineHouseLocations(socket, shineCities, 1);
@@ -674,8 +890,26 @@ function handleShineSettlements(socket) {
     });
 }
 
+function handleShineRobberSettlements(socket) {
+    socket.on('shineRobberSettlements', function(shineSettlements) {
+        svgContainer.selectAll('#robber').transition().duration(1000).style("stroke", "rgb(0,0,0)");
+        console.log(shineSettlements);
+        if (shineSettlements.length > 0) {
+            shineHouseLocations(socket, shineSettlements, 2);
+        } else { // If no houses there, need to end the action here
+            currentAction = -1;
+            svgContainer.selectAll('.devCardAction')[0][0].attributes.fill.value = "white";
+        }
+    });
+}
+
 function handleShineRoads(socket) {
     socket.on("shineRoads", function(shineRoads) {
+
+        if (shineRoads.length <= 1) {
+            currentAction = -1;
+            svgContainer.selectAll('.devCardAction')[0][1].attributes.fill.value = "white";
+        }
 
         var roads = svgContainer.selectAll('.road')[0];
         if (shineRoads.length != 0 && roads[shineRoads[0]].attributes.stroke.value == "white") {
@@ -689,29 +923,6 @@ function handleShineRoads(socket) {
             });
         }
     })
-}
-
-function handleCardDistribution(socket) {
-    socket.on('cards', function(cardData) {
-        updateCardCountsUi(cardData);
-        
-    });
-}
-
-function updateCardCountsUi(cardData) {
-    var playerSquares = svgContainer.selectAll('.cardCount')[0];
-    var resourceText = svgContainer.selectAll('.resourceText')[0];
-
-    for (var key in cardData) { //Get the correct card data index
-        var totalCards = 0;
-        resourceEntries.forEach(function(resource, i) { //For each dict of cards per player
-            totalCards += cardData[key].cardData[resource];
-            if (cardData[key].playerIndex == playerIndex) {
-                resourceText[i].innerHTML = cardData[key].cardData[resource];
-            }
-        });
-        playerSquares[key].innerHTML = "Cards: " + totalCards;
-    }
 }
 
 function handleDiceRoll(socket) {

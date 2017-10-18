@@ -7,7 +7,9 @@ const PlayerCardsModule = require('./playerCards');
 const PlayerCards = PlayerCardsModule.PlayerCards;
 const order = PlayerCardsModule.order;
 const Player = require('./player');
+const Port = require('./port');
 
+var largestArmy = {}; //CurrentRoom to playerIndex
 var hexagonData = {}; //Channel name to list
 var vertexData = {};
 var roadData = {};
@@ -16,6 +18,7 @@ var playerTurn = {};
 var developmentCardData = {}; // Number of dev cards still left in a game
 var roomData = {}; //currentRoom -> list of players in room
 var portVertexData = {};
+var resumeGameData = {};
 
 var playerData = {}; //uuid to playerData
 var playerCardData = {};
@@ -29,11 +32,13 @@ exports.handleBoardCreation = function createBoard(socket, uuid) {
     var currentRoom = playerData[uuid].getRoom();
 	if (hexagonData[currentRoom] == null) {
         playerTurn[currentRoom] = -1;
-		hexagonData[currentRoom] = createHexagonObjects(radiusScaled);
+		hexagonData[currentRoom] = createHexagonObjects(radiusScaled, currentRoom);
 		vertexData[currentRoom] = createVertexObjects(hexagonData[currentRoom], radiusScaled);
 		roadData[currentRoom] = createRoadObjects(vertexData[currentRoom]);
         developmentCardData[currentRoom] = createDevelopmentCards();
         portVertexData[currentRoom] = createPortVertices(vertexData[currentRoom]);
+        largestArmy[currentRoom] = -1;
+        resumeGameData[currentRoom] = [];
 	}
 
 
@@ -45,14 +50,17 @@ exports.handleBoardCreation = function createBoard(socket, uuid) {
 		  	"vertices": vertexData[currentRoom],
 		  	"roads": roadData[currentRoom],
             "ports": portVertexData[currentRoom],
-            "players": roomData[currentRoom]
+            "players": roomData[currentRoom],
+            "robber": robberData[currentRoom]
 		});
 }
 
 function createPortVertices(vertices) {
+    var remainingResources = [0, 1, 2, 3, 4, 5, 5, 5, 5];
     var twoNeighbors = [];
     var inelligibleIds = [];
-    portVertices = [];
+    var portVertices = [];
+    var ports = [];
     vertices.forEach(function(vertex) {
         if (vertex.getNeighbors().length == 2) {
             twoNeighbors.push(vertex)
@@ -78,12 +86,14 @@ function createPortVertices(vertices) {
 
                 var neighbor2 = vertices[chosenNeighborId].getNeighbors();
                 portVertices.push(chosenNeighborId);
+                var portResource = remainingResources[Math.floor(Math.random()*remainingResources.length)];
+                ports.push(new Port(chosenVertexId, chosenNeighborId, portResource));
                 inelligibleIds = inelligibleIds.concat(neighbor2);
                 break;
             }
         }
     }
-    return portVertices;
+    return ports;
 }
 
 function createDevelopmentCards() {
@@ -93,16 +103,18 @@ function createDevelopmentCards() {
 
 //Only method that needs to know currentRoom, others can get it from uuid
 //Method will include playerIndex, created by chat server because it has more to do with joining and exiting chat rooms
-exports.handlePlayerJoin = function handlePlayerJoin(socket, currentRoom, nickName, uuid) {
+exports.handlePlayerJoin = function handlePlayerJoin(io, socket, currentRoom, nickName, uuid) {
     if (playerData[uuid] == null) {
         createPlayerDataObject(currentRoom, nickName, uuid);
-        emitPlayerToRestofRoom(socket, currentRoom, uuid);
+        emitPlayersToRestOfRoom(io, socket, currentRoom);
     }
     // console.log('PLAYERS IN ROOM', roomData[currentRoom]);
 }
 
-function emitPlayerToRestofRoom(socket, currentRoom) {
-    socket.broadcast.to(currentRoom).emit('newPlayer', roomData[currentRoom]);
+function emitPlayersToRestOfRoom(io, socket, currentRoom) {
+    console.log('emit players', socket.id, currentRoom, roomData[currentRoom]);
+    io.sockets.in(currentRoom).emit('newPlayer', roomData[currentRoom]);
+    // socket.broadcast.to(currentRoom).emit('newPlayer', roomData[currentRoom]);
 }
 
 function createPlayerDataObject(currentRoom, nickName, uuid) {
@@ -119,7 +131,7 @@ function createPlayerDataObject(currentRoom, nickName, uuid) {
 
 //Hexagon creation with color, number and center
 //Do rows, if row exists across y axis then create that in same loop
-function createHexagonObjects(radius) {
+function createHexagonObjects(radius, currentRoom) {
     var xp = 190 + 95;
     var yp = 110 + 40;
     var size = 5;
@@ -150,6 +162,7 @@ function createHexagonObjects(radius) {
         count += 1;
     }//for i
 
+    robberData[currentRoom] = hexagons.map(h => h.getResource()).indexOf(5); //5 is the desert
 
     return hexagons;
 }
@@ -331,7 +344,7 @@ exports.handleBuyDevelopmentCard = function(io, socket, currentRoom, payload) {
 
             devCards[index] -= 1;
             playerData[uuid].getCards().addResourceAmount(5 + index, 1);
-            io.sockets.in(currentRoom).emit('buyDevCard', {"cardData": playerData[uuid].getCards(), "devCardIndex": index});
+            io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(i => i.getCards()));
             return;
         }
         index ++;
@@ -407,10 +420,11 @@ exports.handleShineSettlements = function(socket, currentRoom, settlementInfo) {
 }
 
 
-exports.handleShineRoads = function(socket, currentRoom, payload) {
+exports.handleShineRoads = function(io, socket, currentRoom, payload) {
 
     var uuid = payload["uuid"];
     var playerIndex = payload["playerIndex"];
+    var type = payload["type"];
     console.log("Shine Roads", "uuid", uuid, "playerIndex", playerIndex);
 
     var vertices = vertexData[currentRoom];
@@ -437,6 +451,16 @@ exports.handleShineRoads = function(socket, currentRoom, payload) {
             });
         }
     })
+
+    if (type == "road building") {
+        if (playerData[uuid].getCards().getResourceAmount(7) > 0) {
+            playerData[uuid].getCards().subtractResourceAmount(7, 1);
+            io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(i => i.getCards()));
+        } else {
+            shineRoads = [];
+        }
+    }
+    console.log(shineRoads);
     socket.emit("shineRoads", shineRoads);
 }
 
@@ -448,15 +472,15 @@ exports.handleHousePlacement = function(io, socket, currentRoom, locationInfo) {
     console.log("House Placement", "uuid", uuid, "playerIndex", playerIndex, 'specificVertex', vertexId);
 
 	specificVertex.setPlayerIndex(playerIndex);
-	specificVertex.upgradeHouse();
+	locationInfo["type"] = specificVertex.upgradeHouse(); //returns house type
 
 	locationInfo["playerIndex"] = playerIndex;
 
     handleVictoryPointChange(io, uuid, currentRoom);
-	socket.broadcast.to(currentRoom).emit('vertex', locationInfo);
+    io.sockets.in(currentRoom).emit('vertex', locationInfo);
 }
 
-exports.handleRoadPlacement = function(socket, currentRoom, roadInfo) {
+exports.handleRoadPlacement = function(io, socket, currentRoom, roadInfo) {
     var uuid = roadInfo["uuid"];
     var playerIndex = playerData[uuid].getPlayerIndex();
 	var roadId = roadInfo["id"];
@@ -464,15 +488,8 @@ exports.handleRoadPlacement = function(socket, currentRoom, roadInfo) {
 
 	roadData[currentRoom][roadId].setPlayerIndex(playerIndex);
 	roadInfo["playerIndex"] = playerIndex;
-	socket.broadcast.to(currentRoom).emit("road", roadInfo);
-}
-
-exports.handleRobberPlacement = function(socket, currentRoom, robberInfo) {
-    var uuid = robberInfo['uuid'];
-	console.log("Robber Movement", robberInfo);
-	robberData[currentRoom] = robberInfo["hexIndex"];
-	// robberInfo["playerIndex"] = playerData[socket.id];
-	socket.broadcast.to(currentRoom).emit("robberPlacement", robberInfo);
+    
+    io.sockets.in(currentRoom).emit('road', roadInfo);
 }
 
 exports.handleBeginTurn = function(io, socket, currentRoom, turnInfo) {
@@ -488,14 +505,14 @@ exports.handleBeginTurn = function(io, socket, currentRoom, turnInfo) {
         //Ask them if they want to play the knight before the turn
         //TODO
         console.log(player.name, 'had knight to be able to use');
-        askIfUseKnight(playerTurn[currentRoom]);
+        askIfUseKnight(playerTurn[currentRoom], socket);
         handleMainTurnPhase(io, currentRoom);
     } else {
         handleMainTurnPhase(io, currentRoom);
     }
 }
 
-function askIfUseKnight(turn) {
+function askIfUseKnight(turn, socket) {
     socket.emit('ifUseKnight', turn);
 }
 
@@ -505,14 +522,30 @@ function handleMainTurnPhase(io, currentRoom) {
     io.sockets.in(currentRoom).emit('dice', dice);
     if (dice[0] + dice[1] == 7) {
         console.log("ROBBER!!!");
-        robberEvent(io);
+        robberEvent(io, currentRoom);
     } else {
         distributeCards(io, dice[0] + dice[1], currentRoom);
     }
 }
 
-function robberEvent(io) {
+function robberEvent(io, currentRoom) {
+    //Disable all buttons for everyone on start except resource buttons for those with > 7, on end enable buttons for person whose turn it is?
+    io.sockets.in(currentRoom).emit('7deadlySins', roomData[currentRoom].map(p => p.getCards()));
+}
 
+exports.resumeGameFromRobberEvent = function(io, currentRoom, robbedData) {
+    var uuid = robbedData['uuid'];
+    var cards = robbedData['cards'];
+    console.log('resumeGame', 'uuid', uuid, 'cards', cards);
+    if (cards != null) {
+        playerData[uuid].getCards().robbered(cards);
+    }
+    resumeGameData[currentRoom].push(playerData[uuid].getPlayerIndex());
+    if (resumeGameData[currentRoom].length == roomData[currentRoom].length) { //Resume Game
+        console.log('enough players have finished being robbered to resume game');
+        resumeGameData[currentRoom] = [];
+        io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(p => p.getCards())); //The knight then moves here in the UI
+    }
 }
 
 function getPlayer(currentRoom, index) {
@@ -541,4 +574,79 @@ function getDiceRoll() {
     var one = Math.floor(Math.random()*6) + 1;
     var two = Math.floor(Math.random()*6) + 1;
     return [one, two];
+}
+
+exports.handleNameChangeAttempts = function(io, socket, previousName, name, uuid, currentRoom) {
+    console.log('io', io, 'previousName', previousName, 'name', name, 'uuid', uuid, 'currentRoom', currentRoom, 'socket.id', socket.id);
+    playerData[uuid].name = name;
+    emitPlayersToRestOfRoom(io, socket, currentRoom);
+}
+
+exports.handleMonopoly = function(io, socket, currentRoom, monopolyData) {
+    var resourceName = order[monopolyData["resource"]];
+    var uuid = monopolyData['uuid'];
+    console.log("monopoly", resourceName, uuid);
+    var totalCards = 0;
+    roomData[currentRoom].forEach(function(player) {
+        if (playerData[uuid].getPlayerIndex() != player.getPlayerIndex()) {
+            totalCards += player.getCards().monopolyResource(monopolyData['resource']);
+        }
+    })
+    if (playerData[uuid].getCards().getResourceAmount(8) > 0) { //Can't use if have 0
+        playerData[uuid].getCards().subtractResourceAmount(8, 1); //Monopoly - 8 will always happen
+        playerData[uuid].getCards().addResourceAmount(monopolyData['resource'], totalCards);
+    }
+    io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(i => i.getCards()));
+}
+
+exports.handleYearOfPlenty = function(io, socket, currentRoom, yearOfPlentyData) {
+    var resourceName = order[yearOfPlentyData["resource"]];
+    var uuid = yearOfPlentyData['uuid'];
+    console.log("Year of Plenty", resourceName, uuid);
+    if (playerData[uuid].getCards().getResourceAmount(9) > 0) { //Can't use if have 0
+        playerData[uuid].getCards().subtractResourceAmount(9, 1); //Year of Plenty - 9
+        playerData[uuid].getCards().yearOfPlenty(yearOfPlentyData['resources']);
+    }
+    io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(i => i.getCards()));
+}
+
+//Relies on FE to make sure they don't have any knights
+exports.handleRobberPlacement = function(io, socket, currentRoom, robberInfo) {
+    var uuid = robberInfo['uuid'];
+    console.log("Robber Movement", robberInfo);
+    robberData[currentRoom] = robberInfo["hexIndex"];
+    // robberInfo["playerIndex"] = playerData[socket.id];
+    socket.broadcast.to(currentRoom).emit("robberPlacement", robberInfo);
+
+    var adjVertices = hexagonData[currentRoom][robberInfo['hexIndex']].getVertices();
+    var occupiedVertices = adjVertices.filter(function(vertex) {
+        return vertexData[currentRoom][vertex].getPlayerIndex() != -1;
+    });
+    playerData[uuid].getCards().subtractResourceAmount(5, 1);// knight is 5, will be shown on FE when anyone is robbed
+    if (playerData[uuid].incrementKnightsUsed(roomData[currentRoom].map(p => p.knightsUsed))) { //True if user has largestArmy
+        if (largestArmy[currentRoom] != playerData[uuid].getPlayerIndex()) {
+            console.log('new largestArmy owner');
+            playerData[uuid].incrementVictoryPoints();
+            playerData[uuid].incrementVictoryPoints();
+            var oldPlayer = getPlayer(currentRoom, largestArmy[currentRoom]);
+            if (oldPlayer != null) {
+                oldPlayer.victoryPoints -= 2;
+            }
+            largestArmy[currentRoom] = playerData[uuid].getPlayerIndex();
+        }
+    }
+    emitPlayersToRestOfRoom(io, socket, currentRoom);
+    socket.emit('shineRobberSettlements', occupiedVertices); //Shine to robbing player the victims
+}
+
+exports.handleRobberEvent = function(io, socket, currentRoom, robberInfo) {
+    var vertex = robberInfo['id'];
+    var uuid = robberInfo['uuid'];
+    var robberedPlayer = getPlayer(currentRoom, vertexData[currentRoom][vertex].getPlayerIndex());
+    var robbedResource = robberedPlayer.getCards().rob();
+    if (robbedResource > -1) {
+        playerData[uuid].getCards().addResourceAmount(robbedResource, 1);
+    }
+    console.log('Robber Stole from someone', 'uuid', uuid, 'vertex', vertex, 'robbedResource', robbedResource, 'robberedPlayer', robberedPlayer);
+    io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(i => i.getCards()));
 }

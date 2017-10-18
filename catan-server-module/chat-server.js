@@ -10,10 +10,10 @@ var disconnecting = []; //List of nickNames that are disconnecting
 exports.onConnection = function(socket, fieldio) {
 	io = fieldio;
 
-	handleRegister(socket, nickNames, namesUsed); //Join room, or set to old socket if returning user
+	handleRegister(io, socket, nickNames, namesUsed); //Join room, or set to old socket if returning user
 
 	handleMessageBroadcast(socket, nickNames);
-	handleNameChangeAttempts(socket, nickNames, namesUsed);
+	handleNameChangeAttempts(io, socket, nickNames, namesUsed);
 	handleRoomJoining(socket);
 
 	socket.on('rooms', function() {
@@ -23,14 +23,42 @@ exports.onConnection = function(socket, fieldio) {
 	handleUserDisconnection(socket, nickNames, namesUsed);
 	// socket.leave(socket.id); //Added this because sockets join a room of their own socket id.
 	handleHousePlacement(io, socket, currentRoom);
-	handleRoadPlacement(socket, currentRoom);
-	handleRobberPlacement(socket, currentRoom);
+	handleRoadPlacement(io, socket, currentRoom);
+	handleRobberPlacement(io, socket, currentRoom);
 	handleBeginTurn(io, socket, currentRoom);
-	handleShineRoads(socket, currentRoom);
+	handleShineRoads(io, socket, currentRoom);
 	handleShineSettlements(socket, currentRoom);
 	handleShineCities(socket, currentRoom);
 	handleBuyDevelopmentCard(io, socket, currentRoom);
+	handleMonopoly(io, socket, currentRoom);
+	handleYearOfPlenty(io, socket, currentRoom);
+	handleRobberEvent(io, socket, currentRoom)
+	handleResumeGame(io, socket, currentRoom);
 };
+
+function handleResumeGame(io, socket, currentRoom) {
+	socket.on('resumeGame', function(robbedData) {
+		catanServer.resumeGameFromRobberEvent(io, currentRoom[socket.id], robbedData);
+	})
+}
+
+function handleRobberEvent(io, socket, currentRoom) {
+	socket.on('robberEvent', function(robberData) {
+		catanServer.handleRobberEvent(io, socket, currentRoom[socket.id], robberData);
+	});
+}
+
+function handleMonopoly(io, socket, currentRoom) {
+	socket.on('monopoly', function(monopolyData) {
+		catanServer.handleMonopoly(io, socket, currentRoom[socket.id], monopolyData);
+	})
+}
+
+function handleYearOfPlenty(io, socket, currentRoom) {
+	socket.on('yearOfPlenty', function(yearOfPlentyData) {
+		catanServer.handleYearOfPlenty(io, socket, currentRoom[socket.id], yearOfPlentyData);
+	})
+}
 
 function handleBuyDevelopmentCard(io, socket, currentRoom) {
 	socket.on('buyDevCard', function(devCardData) {
@@ -50,13 +78,13 @@ function handleShineSettlements(socket, currentRoom) {
 	});
 }
 
-function handleShineRoads(socket, currentRoom) {
+function handleShineRoads(io, socket, currentRoom) {
 	socket.on('shineRoads', function(playerIndex) {
-		catanServer.handleShineRoads(socket, currentRoom[socket.id], playerIndex);
+		catanServer.handleShineRoads(io, socket, currentRoom[socket.id], playerIndex);
 	});
 }
 
-function handleRegister(socket, nickNames, namesUsed) {
+function handleRegister(io, socket, nickNames, namesUsed) {
 	socket.on('register', function(uuid) {
 		console.log("REGISTER, ", uuid);
 		var storedName = null;
@@ -94,7 +122,7 @@ function handleRegister(socket, nickNames, namesUsed) {
 		}
 		
 		joinRoom(socket, 'Lobby');
-		catanServer.handlePlayerJoin(socket, currentRoom[socket.id], nickNames[socket.id], uuid);
+		catanServer.handlePlayerJoin(io, socket, currentRoom[socket.id], nickNames[socket.id], uuid);
 		catanServer.handleBoardCreation(socket, uuid);
 
 	});
@@ -107,9 +135,9 @@ function handleBeginTurn(io, socket, currentRoom) {
 	});
 }
 
-function handleRobberPlacement(socket, currentRoom) {
+function handleRobberPlacement(io, socket, currentRoom) {
 	socket.on("robberPlacement", function(robberInfo) {
-		catanServer.handleRobberPlacement(socket, currentRoom[socket.id], robberInfo);
+		catanServer.handleRobberPlacement(io, socket, currentRoom[socket.id], robberInfo);
 	})
 }
 
@@ -120,9 +148,9 @@ function handleHousePlacement(io, socket, currentRoom) {
 	});
 }
 
-function handleRoadPlacement(socket) {
+function handleRoadPlacement(io, socket) {
 	socket.on("road", function(roadInfo) {
-		catanServer.handleRoadPlacement(socket, currentRoom[socket.id], roadInfo);
+		catanServer.handleRoadPlacement(io, socket, currentRoom[socket.id], roadInfo);
 	});
 }
 
@@ -161,7 +189,7 @@ function joinRoom(socket, room) {
 	}
 }
 
-function handleNameChangeAttempts(socket, nickNames, namesUsed) {
+function handleNameChangeAttempts(io, socket, nickNames, namesUsed) {
 	socket.on('nameAttempt', function(name) {
 		if (name.indexOf("Guest") == 0) {
 			socket.emit("nameResult", {success: false, message: 'Names cannot begin with "Guest".'});
@@ -175,6 +203,7 @@ function handleNameChangeAttempts(socket, nickNames, namesUsed) {
 				uuids[name] = uuids[previousName];
 				delete uuids[previousName];
 				delete namesUsed[previousNameIndex];
+				catanServer.handleNameChangeAttempts(io, socket, previousName, name, uuids[name], currentRoom[socket.id]);
 				socket.emit("nameResult", {success: true, name: name});
 
 				socket.broadcast.to(currentRoom).emit('message', {text: previousName + " is now known as " + name + "."});

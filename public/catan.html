@@ -67,30 +67,30 @@
 
 
 <!-- 
-Todo list:
-
-turn stuff
-    
+Todo list:----------
 Trading
     ports
     other players
-Robber Events
-    On 7 roll
-    Use a knight before roll
-Development cards
-    - Use
-        - largest army ui
-        - victory points from largest army
+Use a knight before roll
 Longest Road
+    - max number of roads
+    - victory points
 
-Small
+Small --------
+Game end when someone has 10 victory points
 Spend cards
-Difference between city and settlement ui
 Begin game
     others not allowed to join game
-Update name if change name
-Need to update roomData when someone changes a room from chat server
+knight and road building will be cut off if refresh
+city edges dont flash when robbered
+Robber event doesn't currently stop others from playing on, also need to resume game correctly
+Can play dev cards when not your turn
+
+Not necessary for first time use ----------
+6 and 8 can't be next to each other
 Need to update playerData to remove the user if they have disconnected
+Need to update roomData when someone changes a room from chat server
+victory point change should be changed in catanjs
 
 Done:
 9/17/2017
@@ -186,6 +186,45 @@ vertices and roads populated on refresh also number of cards and dev cards
 created player object
 turn logic
 Some way to indicate whose turn it is
-Created use Dev Card Ui 
+Created use Dev Card Ui
+
+10/12
+Can use knight
+Can use year of plenty
+Can use road building
+Can use monopoly
+stealing from self doesn't give self cards
+
+10/13
+Robber doesn't get moved on refresh
+Knight still red after using on no house square, currentAction 0
+Can't see how many of which dev cards you have
+
+10/14
+Oktoberfest
+
+10/15
+createPlayerResourcesUi
+createPlayerCardUi
+
+10/16
+Decrement number of dev cards when use
+Update name if change name
+largest army ui
+victory points from largest army
+Difference between city and settlement ui
+created port oject
+port colors for dif ports
+FE make sure can't use knight if none left
+Victory Card turns red when click
+Can't play knight on square it came from (covers up the click listener on own square)
+Robber Events
+    On 7 roll
+
+10/17
+Fixed bug with robber event
+Fixed bug with largest army
+Year of plenty now increments while playing it
+town doesn't flash if robber moved to rob second house and so on
 
  -->
