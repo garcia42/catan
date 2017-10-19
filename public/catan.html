@@ -72,9 +72,7 @@ Trading
     ports
     other players
 Use a knight before roll
-Longest Road
-    - max number of roads
-    - victory points
+Get app on heroku
 
 Small --------
 Game end when someone has 10 victory points
@@ -82,15 +80,16 @@ Spend cards
 Begin game
     others not allowed to join game
 knight and road building will be cut off if refresh
-city edges dont flash when robbered
-Robber event doesn't currently stop others from playing on, also need to resume game correctly
-Can play dev cards when not your turn
 
 Not necessary for first time use ----------
 6 and 8 can't be next to each other
 Need to update playerData to remove the user if they have disconnected
 Need to update roomData when someone changes a room from chat server
 victory point change should be changed in catanjs
+refactor longest road code into its own file
+
+Intermittent----------
+Knight still flashes even when no houses to rob
 
 Done:
 9/17/2017
@@ -226,5 +225,23 @@ Fixed bug with robber event
 Fixed bug with largest army
 Year of plenty now increments while playing it
 town doesn't flash if robber moved to rob second house and so on
+first half longest road
 
+10/18
+Longest Road
+    - max number of roads
+    - victory points
+    - ui
+max number of towns
+max number of cities
+multiple click listeners for settlements and roads
+on refresh cities become settlements
+city edges dont flash when robbered
+Can play dev cards when not your turn
+
+10/19
+shouldn't be able to buy city and press buy settlement at the same time
+when build a city, the settlements turn invisible
+Robber event doesn't currently stop others from playing on, also need to resume game correctly
+Actions turn player's color rather than red when clicked
  -->

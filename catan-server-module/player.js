@@ -8,6 +8,9 @@ class Player {
 		this.cards = cards;
 		this.knightsUsed = 0;
 		this.longestRoad = 0;
+		this.roadsUsed = 0;
+		this.housesUsed = 0;
+		this.citiesUsed = 0;
 	}
 
 	getPlayerIndex() {
@@ -42,6 +45,31 @@ class Player {
 		return this.longestRoad;
 	}
 
+	getRoadsUsed() {
+		return this.roadsUsed;
+	}
+
+	getHousesUsed() {
+		return this.housesUsed;
+	}
+
+	incrementHousesUsed() {
+		this.housesUsed += 1;
+	}
+
+	incrementRoadsUsed() {
+		this.roadsUsed += 1;
+	}
+
+	incrementCitiesUsed() {
+		this.housesUsed -= 1;
+		this.citiesUsed += 1;
+	}
+
+	getCitiesUsed() {
+		return this.citiesUsed;
+	}
+
 	//Returns true if you have the largestArmy
 	incrementKnightsUsed(knightsUsedInRoom) {
 		this.knightsUsed += 1;
@@ -54,6 +82,19 @@ class Player {
 		}
 		console.log('incrementKnightsUsed', largestArmy, this.knightsUsed);
 		return largestArmy;
+	}
+
+	incrementLongestRoad(newLongestRoad, longestRoadsInRoom) {
+		this.roadsUsed += 1;
+		this.longestRoad = newLongestRoad;
+		var isbiggestRoad = this.longestRoad >= 5;
+		for (var i in longestRoadsInRoom) {
+			if (this.longestRoad <= longestRoadsInRoom[i]) {
+				isbiggestRoad = false;
+				break;
+			}
+		}
+		return isbiggestRoad;
 	}
 }
 

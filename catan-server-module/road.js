@@ -38,14 +38,6 @@ class Road {
 		return [this.y1, this.y2];
 	}
 
-	isShowing() {
-		return this.getColor() != "transparent";
-	}
-
-	getColor() {
-		return this.line.attributes.stroke.value;
-	}
-
 	setLine(line) {
 		this.line = line;
 	}
@@ -64,12 +56,10 @@ class Road {
 
 	getNeighbors(verticesDict) {
 		var neighbors = [];
-		var i;
-		var key;
-		for (i in this.getEndpoints()) {
+		for (var i in this.getEndpoints()) {
 			var vIndex = this.getEndpoints()[i];
 			var neighborRoadsDict = verticesDict[vIndex].getRoads();
-			for (key in neighborRoadsDict) {
+			for (var key in neighborRoadsDict) {
 				if (key != this.getId()) { //Dont add neighbor Ids that match your own id
 					neighbors.push(key);
 				}
@@ -80,44 +70,12 @@ class Road {
 
 	getNeighborsOfSameColor(roadsD, verticesDict) {
 		var sameColorNeighbors = [];
-		for (neighbor in this.getNeighbors(verticesDict)) {
-			if (this.getColor() == roadsD[this.getNeighbors(verticesDict)[neighbor]].getColor()) {
+		for (var neighbor in this.getNeighbors(verticesDict)) {
+			if (this.getPlayerIndex() == roadsD[this.getNeighbors(verticesDict)[neighbor]].getPlayerIndex()) {
 				sameColorNeighbors.push(this.getNeighbors(verticesDict)[neighbor]);
 			}
 		}
 		return sameColorNeighbors;
-	}
-
-	//In the case of a circle of roads, return the road with the least connected same color roads
-	getEndsOfRoadSameColor(roadsD, verticesDict) {
-		var queue = [this.getId()];
-		var visited = [this.getId()];
-		var curLowestRoad;
-		var curLowestValue = 100;
-		var endRoads = [];
-		while (queue.length > 0) {
-			curRoad = queue.pop();
-			var neighbors = roadsD[curRoad].getNeighborsOfSameColor(roadsD, verticesDict);
-			if (neighbors.length <= 1) {
-				endRoads.push(curRoad);
-			}
-			if (neighbors.length < curLowestValue) {
-				curLowestValue = neighbors.length;
-				curLowestRoad = curRoad;
-			}
-			var neighbor;
-			for (neighbor in neighbors) {
-				if (visited.indexOf(neighbors[neighbor]) == -1) {
-					queue.push(neighbors[neighbor]);
-					visited.push(neighbors[neighbor]);
-				}
-			}
-		}
-
-		if (endRoads.length == 0) {
-			return [curLowestRoad];
-		}
-		return endRoads;
 	}
 
 	isInList(roadList) {
@@ -136,18 +94,6 @@ class Road {
 
 	setId(id) {
 		this.id = id;
-	}
-
-	//Find Vertex that has only 1 road of the same color as this one, could be both or neither
-	getEndVertex(roadsDict, verticesDict) {
-		var endpoint;
-		for (endpoint in this.getEndpoints(verticesDict)) {
-			var vertexIndex = this.getEndpoints()[endpoint];
-			if (verticesDict[vertexIndex].getNumberOfRoadsOfColor(this.getColor(), roadsDict) == 1) {
-				return this.getEndpoints()[endpoint];
-			}
-		}
-		return -1;
 	}
 }
 

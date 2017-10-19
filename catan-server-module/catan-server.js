@@ -10,6 +10,7 @@ const Player = require('./player');
 const Port = require('./port');
 
 var largestArmy = {}; //CurrentRoom to playerIndex
+var longestRoadData = {};
 var hexagonData = {}; //Channel name to list
 var vertexData = {};
 var roadData = {};
@@ -31,13 +32,14 @@ exports.handleBoardCreation = function createBoard(socket, uuid) {
 	var radiusScaled = radius * scale;
     var currentRoom = playerData[uuid].getRoom();
 	if (hexagonData[currentRoom] == null) {
-        playerTurn[currentRoom] = -1;
+        playerTurn[currentRoom] = 0;
 		hexagonData[currentRoom] = createHexagonObjects(radiusScaled, currentRoom);
 		vertexData[currentRoom] = createVertexObjects(hexagonData[currentRoom], radiusScaled);
 		roadData[currentRoom] = createRoadObjects(vertexData[currentRoom]);
         developmentCardData[currentRoom] = createDevelopmentCards();
         portVertexData[currentRoom] = createPortVertices(vertexData[currentRoom]);
         largestArmy[currentRoom] = -1;
+        longestRoadData[currentRoom] = -1;
         resumeGameData[currentRoom] = [];
 	}
 
@@ -367,6 +369,11 @@ exports.handleShineCities = function(socket, currentRoom, payload) {
     var uuid = payload["uuid"];
     console.log("Shine Cities", "uuid", uuid, "playerIndex", playerIndex);
 
+    if (playerData[uuid].getCitiesUsed() >= 4) {
+        socket.emit('shineCities', []);
+        return;
+    }
+
     var vertices = vertexData[currentRoom];
     var shineCities = [];
     vertices.forEach(function(vertex) {
@@ -387,7 +394,12 @@ exports.handleShineSettlements = function(socket, currentRoom, settlementInfo) {
     var vertices = vertexData[currentRoom];
     var shineSettlements = [];
 
-    vertices.forEach(function(vertex) {
+    if (playerData[uuid].getHousesUsed() >= 5) { //Max number of houses
+        socket.emit('shineSettlements', []);
+        return;
+    }
+
+    vertices.forEach(function(vertex) { //All free open spaces for a house
         if (vertex.getPlayerIndex() == -1) {
             var add = true;
             vertex.getNeighbors().forEach(function(vertexNeighborIndex) {
@@ -401,7 +413,7 @@ exports.handleShineSettlements = function(socket, currentRoom, settlementInfo) {
         }
     });
 
-    if (type == 1) {
+    if (type == 1) { //Remove spaces that aren't next to a road
         var shineSettlementsInGame = [];
         var roads = roadData[currentRoom];
         shineSettlements.forEach(function(vertexIndex, i) {
@@ -427,10 +439,17 @@ exports.handleShineRoads = function(io, socket, currentRoom, payload) {
     var type = payload["type"];
     console.log("Shine Roads", "uuid", uuid, "playerIndex", playerIndex);
 
+    if (playerData[uuid].getRoadsUsed() >= 15) { // Max number of roads
+        console.log('Built the max number of roads');
+        shineRoads = [];
+        socket.emit("shineRoads", shineRoads);
+        return;
+    }
+
     var vertices = vertexData[currentRoom];
     var roads = roadData[currentRoom];
     var shineRoads = [];
-    vertices.forEach(function(vertex, i) {
+    vertices.forEach(function(vertex, i) { //free roads around owned vertices
         if (vertex.getPlayerIndex() == playerIndex) {
             vertex.getRoads().forEach(function(roadIndex) {
                 if (roads[roadIndex].getPlayerIndex() == -1) {
@@ -440,7 +459,7 @@ exports.handleShineRoads = function(io, socket, currentRoom, payload) {
         }
     });
 
-    roads.forEach(function(road, i) {
+    roads.forEach(function(road, i) { //free roads around owned roads
         if (road.getPlayerIndex() == playerIndex) {
             road.getEndpoints().forEach(function(vertexEndpoint) {
                 vertices[vertexEndpoint].getRoads().forEach(function(neighborRoad) {
@@ -460,7 +479,6 @@ exports.handleShineRoads = function(io, socket, currentRoom, payload) {
             shineRoads = [];
         }
     }
-    console.log(shineRoads);
     socket.emit("shineRoads", shineRoads);
 }
 
@@ -473,6 +491,11 @@ exports.handleHousePlacement = function(io, socket, currentRoom, locationInfo) {
 
 	specificVertex.setPlayerIndex(playerIndex);
 	locationInfo["type"] = specificVertex.upgradeHouse(); //returns house type
+    if (specificVertex.getHouseType() == 2) {
+        playerData[uuid].incrementCitiesUsed();
+    } else {
+        playerData[uuid].incrementHousesUsed();
+    }
 
 	locationInfo["playerIndex"] = playerIndex;
 
@@ -488,8 +511,69 @@ exports.handleRoadPlacement = function(io, socket, currentRoom, roadInfo) {
 
 	roadData[currentRoom][roadId].setPlayerIndex(playerIndex);
 	roadInfo["playerIndex"] = playerIndex;
-    
+
+    var curLongestChain = 0;
+    getAllVerticesOfPlayer(vertexData[currentRoom], roadData[currentRoom], playerIndex).forEach(function(vertexIndex) {
+        curLongestChain = Math.max(dfsOnVertex(vertexData[currentRoom], roadData[currentRoom], vertexIndex, playerData[uuid].getPlayerIndex()), curLongestChain);
+    });
+    if (playerData[uuid].incrementLongestRoad(curLongestChain, roomData[currentRoom].map(p => p.getLongestRoad()))) {
+        var oldPlayer = getPlayer(currentRoom, longestRoadData[currentRoom]);
+        if (oldPlayer != null) {
+            oldPlayer.victoryPoints -= 2;
+        }
+        longestRoadData[currentRoom] = playerData[uuid].getPlayerIndex();
+        playerData[uuid].incrementVictoryPoints();
+        playerData[uuid].incrementVictoryPoints();
+    }
+    emitPlayersToRestOfRoom(io, socket, currentRoom);
     io.sockets.in(currentRoom).emit('road', roadInfo);
+}
+
+// Do DFS on every vertex of this color, return largest value found
+function dfsOnVertex(vertices, roads, vertexId, playerIndex) {
+    var queue = [[parseInt(vertexId), [parseInt(vertexId)]]]; //[vertexLeftOffOn, path]
+    //Visited List will be your path, if vertex is in your path then it's been seen already
+    var curLongest = 0;
+    while (queue.length > 0) {
+        var curItem = queue.slice()[0];
+        queue.splice(0, 1); // Remove first element
+        var curVertex = curItem[0];
+        var curPath = curItem[1];
+        var connectedVertices = getVerticesConnectedByColor(playerIndex, roads, vertices[curVertex]);
+
+        connectedVertices.forEach(function(neighborIndex) {
+            if (curPath.indexOf(neighborIndex) == -1) {
+                var newPath = curPath.slice();
+                newPath.push(neighborIndex);
+                queue.unshift([neighborIndex, newPath]); //put at front
+            }
+        });
+
+        curLongest = Math.max(curLongest, curPath.length);
+    }
+    return curLongest - 1;
+}
+
+//Includes vertices that they have a road on
+function getAllVerticesOfPlayer(vertices, roads, playerIndex) {
+    var playersVertices = [];
+    for (var i in vertices) {
+        if (getVerticesConnectedByColor(playerIndex, roads, vertices[i]).length > 0) {
+            playersVertices.push(i)
+        }
+    }
+    return playersVertices;
+}
+
+function getVerticesConnectedByColor(playerIndex, roadsDict, vertex) {
+    var vertices = [];
+    vertex.getRoads().forEach(function(roadIndex) {
+        if (roadsDict[roadIndex].getPlayerIndex() == playerIndex) {
+            var indexOfSelf = roadsDict[roadIndex].getEndpoints().indexOf(vertex.getId());
+            vertices.push(roadsDict[roadIndex].getEndpoints()[1 - indexOfSelf]); // This is an xor :D
+        }
+    });
+    return vertices;
 }
 
 exports.handleBeginTurn = function(io, socket, currentRoom, turnInfo) {
@@ -504,7 +588,6 @@ exports.handleBeginTurn = function(io, socket, currentRoom, turnInfo) {
     if (player.getCards().hasKnight()) {
         //Ask them if they want to play the knight before the turn
         //TODO
-        console.log(player.name, 'had knight to be able to use');
         askIfUseKnight(playerTurn[currentRoom], socket);
         handleMainTurnPhase(io, currentRoom);
     } else {
@@ -530,6 +613,7 @@ function handleMainTurnPhase(io, currentRoom) {
 
 function robberEvent(io, currentRoom) {
     //Disable all buttons for everyone on start except resource buttons for those with > 7, on end enable buttons for person whose turn it is?
+    io.sockets.in(currentRoom).emit('whoseTurn', -1);
     io.sockets.in(currentRoom).emit('7deadlySins', roomData[currentRoom].map(p => p.getCards()));
 }
 
@@ -545,6 +629,7 @@ exports.resumeGameFromRobberEvent = function(io, currentRoom, robbedData) {
         console.log('enough players have finished being robbered to resume game');
         resumeGameData[currentRoom] = [];
         io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(p => p.getCards())); //The knight then moves here in the UI
+        io.sockets.in(currentRoom).emit('whoseTurn', playerTurn[currentRoom]);
     }
 }
 
