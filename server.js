@@ -49,7 +49,7 @@ function serveStatic(response, cache, absPath) {
 	}
 }
 
-server.listen(3000, function() {
+server.listen(process.env.PORT || 3000, function() {
 	console.log("Server listening on port 3000.");
 });
 catanServerModule.listen(server);
