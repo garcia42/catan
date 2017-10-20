@@ -1,23 +1,29 @@
 catan
 =====
 
-Trying to make Catan with my boy Henry Gan
+Todo list:----------
+Trading
+    ports
+    other players
+Use a knight before roll
 
+Small --------
+Spend cards
+Begin game
+    others not allowed to join game
+knight and road building will be cut off if refresh
+Need to update roomData when someone changes a room from chat server
+    Also need to resend the ui to that room's ui
+    Need to update playerData to remove the user if they have disconnected
+It should remember what room you were in last and connect you to that room
 
-Things we Need:
+Not necessary for first time use ----------
+6 and 8 can't be next to each other
+victory point change should be changed in catanjs
+refactor longest road code into its own file
+Move dice into the svg
 
-Don't Require Network Programming:
-
-1) Ports \n
-5) Dice Rolls
-6) Place Settlements
-7) Get Longest Road
-8) Development Cards
-
-Network Development
-
-1) Turn based strategy
-2) When to send information to Server
-3) How to make a server?
+Intermittent----------
+Knight still flashes even when no houses to rob
 
 ![alt tag](http://i.imgur.com/uAHb8No.png)
