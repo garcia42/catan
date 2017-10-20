@@ -26,4 +26,4 @@ Move dice into the svg
 Intermittent----------
 Knight still flashes even when no houses to rob
 
-![alt tag](https://imgur.com/WoTQ2Mm)
+![alt tag](https://i.imgur.com/WoTQ2Mm.png)
