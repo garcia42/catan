@@ -31,14 +31,9 @@
     </style>
     <body class="noselect">
 
-        <div id="top-bar">
-            <div id="dice">
-            	<img id="dice1" src="dice-rolling-1.png">
-            	<img id="dice2" src="dice-rolling-3.png">
-            </div>
-
-            <div id="end-turn">End Turn</div>
-
+        <div id="dice">
+        	<img id="dice1" src="dice-rolling-1.png">
+        	<img id="dice2" src="dice-rolling-3.png">
         </div>
 
         <script type="text/javascript" src="/javascripts/catanjs.js"></script>
@@ -72,21 +67,21 @@ Trading
     ports
     other players
 Use a knight before roll
-Get app on heroku
 
 Small --------
-Game end when someone has 10 victory points
 Spend cards
 Begin game
     others not allowed to join game
 knight and road building will be cut off if refresh
+Need to update roomData when someone changes a room from chat server
+    Also need to resend the ui to that room's ui
+    Need to update playerData to remove the user if they have disconnected
 
 Not necessary for first time use ----------
 6 and 8 can't be next to each other
-Need to update playerData to remove the user if they have disconnected
-Need to update roomData when someone changes a room from chat server
 victory point change should be changed in catanjs
 refactor longest road code into its own file
+Move dice into the svg
 
 Intermittent----------
 Knight still flashes even when no houses to rob
@@ -244,4 +239,8 @@ shouldn't be able to buy city and press buy settlement at the same time
 when build a city, the settlements turn invisible
 Robber event doesn't currently stop others from playing on, also need to resume game correctly
 Actions turn player's color rather than red when clicked
+Get app on heroku
+Game end when someone has 10 victory points
+Cleaned up UI
+
  -->

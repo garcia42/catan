@@ -17,12 +17,6 @@ a {
 	color: #00B7FF;
 }
 
-#top-bar {
-	overflow: hidden;
-	position: relative;
-    width: 100%;
-}
-
 #end-turn {
 	height: 100%;
     width: 50%;
@@ -45,8 +39,8 @@ a {
 }
 
 #messages {
-	width: 690px;
-	height: 300px;
+	width: 640px;
+	height: 220px;
 	overflow: auto;
 	background-color: #eee;
 	margin-bottom: 1em;

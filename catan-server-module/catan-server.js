@@ -341,7 +341,7 @@ exports.handleBuyDevelopmentCard = function(io, socket, currentRoom, payload) {
             cardRandom -= devCards[index]
         } else if (devCards[index] > 0) {
             if (index == 1) {
-                handleVictoryPointChange(io, uuid, currentRoom);
+                handleVictoryPointChange(io, uuid, currentRoom, 1);
             }
 
             devCards[index] -= 1;
@@ -357,8 +357,15 @@ function add(a, b) {
     return a + b;
 }
 
-function handleVictoryPointChange(io, uuid, currentRoom) {
-    playerData[uuid].incrementVictoryPoints();
+function handleVictoryPointChange(io, uuid, currentRoom, count) {
+    while(count > 0) {
+        playerData[uuid].incrementVictoryPoints();
+        count -= 1;
+    }
+    if (playerData[uuid].getVictoryPoints() >= 10) {
+        //End Game
+        io.sockets.in(currentRoom).emit('gameOver', playerData[uuid]);
+    }
     var listOfVp = roomData[currentRoom].map(i => i.getVictoryPoints());
     console.log("Emitting Victory Point Data to ", currentRoom, listOfVp);
     io.sockets.in(currentRoom).emit('victoryPoint', listOfVp);
@@ -499,7 +506,7 @@ exports.handleHousePlacement = function(io, socket, currentRoom, locationInfo) {
 
 	locationInfo["playerIndex"] = playerIndex;
 
-    handleVictoryPointChange(io, uuid, currentRoom);
+    handleVictoryPointChange(io, uuid, currentRoom, 1);
     io.sockets.in(currentRoom).emit('vertex', locationInfo);
 }
 
@@ -522,8 +529,7 @@ exports.handleRoadPlacement = function(io, socket, currentRoom, roadInfo) {
             oldPlayer.victoryPoints -= 2;
         }
         longestRoadData[currentRoom] = playerData[uuid].getPlayerIndex();
-        playerData[uuid].incrementVictoryPoints();
-        playerData[uuid].incrementVictoryPoints();
+        handleVictoryPointChange(io, uuid, currentRoom, 2);
     }
     emitPlayersToRestOfRoom(io, socket, currentRoom);
     io.sockets.in(currentRoom).emit('road', roadInfo);
@@ -711,8 +717,7 @@ exports.handleRobberPlacement = function(io, socket, currentRoom, robberInfo) {
     if (playerData[uuid].incrementKnightsUsed(roomData[currentRoom].map(p => p.knightsUsed))) { //True if user has largestArmy
         if (largestArmy[currentRoom] != playerData[uuid].getPlayerIndex()) {
             console.log('new largestArmy owner');
-            playerData[uuid].incrementVictoryPoints();
-            playerData[uuid].incrementVictoryPoints();
+            handleVictoryPointChange(io, uuid, currentRoom, 2);
             var oldPlayer = getPlayer(currentRoom, largestArmy[currentRoom]);
             if (oldPlayer != null) {
                 oldPlayer.victoryPoints -= 2;

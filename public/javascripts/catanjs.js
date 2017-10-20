@@ -89,7 +89,25 @@ $(document).ready(function() {
     handleWhoseTurn(socket);
     handleShineRobberSettlements(socket);
     handleSevenDeadlySins(socket);
+    handleGameOver(socket);
 });
+
+function handleGameOver(socket) {
+    socket.on('gameOver', function(winner) {
+        // svgContainer.attr('class', 'wrapper');
+        winner = [winner];
+        svgContainer.selectAll('.topText').data(winner).enter()
+            .append('text')
+            .attr('class', 'topText')
+            .attr('x', containerWidth/4)
+            .attr('y', containerHeight/10)
+            .text(function(d, i) {
+                return 'Congratulations ' + d.name;
+            })
+            .attr('fill', 'black')
+            .attr('font-size', '40px');
+    });
+}
 
 function handleSevenDeadlySins(socket) {
     socket.on('7deadlySins', function(cardData) {
