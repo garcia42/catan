@@ -24,7 +24,6 @@ var inBeginGameData = {};
 var currentRollData = {};
 
 var playerData = {}; //uuid to playerData
-var playerCardData = {};
 
 var scale = 1;
 var radius = 50;
@@ -825,6 +824,18 @@ exports.handleUserLeaveRoom = function(io, uuid) {
         console.log('Erase old game');
         hexagonData[oldRoom] = null;
         roomData[oldRoom] = null;
+
+        playerTurn[oldRoom] = null;
+        vertexData[oldRoom] = null;
+        roadData[oldRoom] = null;
+        developmentCardData[oldRoom] = null;
+        portVertexData[oldRoom] = null;
+        largestArmy[oldRoom] = null;
+        longestRoadData[oldRoom] = null;
+        resumeGameData[oldRoom] = null;
+        inBeginGameData[oldRoom] = null;
+        currentRollData[oldRoom] = null;
+        robberData[oldRoom] = null;
     }
 }
 
