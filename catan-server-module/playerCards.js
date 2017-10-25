@@ -6,7 +6,7 @@ class PlayerCards {
 		this.playerIndex = index;
 		this.cardData = {};
 		for (var resource in order) {
-			this.cardData[order[resource]] = 10;
+			this.cardData[order[resource]] = 0;
 		}
 	}
 
