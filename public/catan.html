@@ -32,8 +32,8 @@
     <body class="noselect">
 
         <div id="dice">
-        	<img id="dice1" src="dice-rolling-1.png">
-        	<img id="dice2" src="dice-rolling-3.png">
+        	<img id="dice1">
+        	<img id="dice2">
         </div>
 
         <script type="text/javascript" src="/javascripts/catanjs.js"></script>
@@ -69,29 +69,20 @@ Trading
 Use a knight before roll
 
 Small --------
-Spend cards
-Begin game
-    others not allowed to join game
-knight and road building will be cut off if refresh
-Need to update roomData when someone changes a room from chat server
-    Also need to resend the ui to that room's ui
-    Need to update playerData to remove the user if they have disconnected or changed rooms
-It should remember what room you were in last and connect you to that room
 
 Not necessary for first time use ----------
-6 and 8 can't be next to each other
-victory point change should be changed in catanjs
-refactor longest road code into its own file
 Move dice into the svg
-
-Intermittent----------
-Knight still flashes even when no houses to rob
+refactor longest road code into its own file
+victory point change should be changed in catanjs
+if player leaves then turn their houses and roads to unowned
+Better way to indicate which player you are
+When being robbered and it's your turn if you refresh then the boxes will be white instead of grey, should be grey until done with the robber event
 
 Done:
 9/17/2017
+roads show up
 Vertices show up
 Player colors remembered
-roads show up
 
 9/18/2017
 robber move across screens
@@ -243,5 +234,50 @@ Actions turn player's color rather than red when clicked
 Get app on heroku
 Game end when someone has 10 victory points
 Cleaned up UI
+
+10/20
+Showing dev card numbers of player 0 not your player?
+It should remember what room you were in last and connect you to that room
+When someone leaves room, should update players
+Should refresh screen if change new room
+Need to update roomData when someone changes a room from chat server
+    Also need to resend the ui to that room's ui
+    Need to update playerData to remove the user or changed rooms
+Sockets show up in list of rooms again
+Handle user disconnect from room
+make text not clickable
+Begin Game button
+
+10/23
+Spend cards
+Join game button
+Begin Game button
+
+10/24
+Begin game functionality
+Put down road after put down house to start game
+    -Road must be connected to house that was just put down
+After put down house, in catan server send shineRoads to client
+Dice shouldn't show up until second house down
+Only show join game if game hasn't started yet
+If player tries to join after game has started then disable it
+Hide begin game button on player who clicked screen
+Store the current action and data for the player
+Refresh currentAction
+    -refresh settlements
+    -refresh cities
+    -refresh roads
+    -robber
+    -refresh monopoly
+    -refresh year of plenty
+    -refresh road building
+    -refresh knight
+Refresh dice
+When you refresh it thinks another action is still on, not -1?
+Refresh doesn't refresh grey if it's not your turn
+When you build a road then whoseTurn boxes both turn not transparent
+Hide begin game button on other players' screens and show spectate if not in game
+When you place road in intro should end turn immediately
+6 and 8 can't be next to each other
 
  -->

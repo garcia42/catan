@@ -1,6 +1,6 @@
 class Player {
 
-	constructor(index, nickName, room, cards) {
+	constructor(uuid, index, nickName, room, cards) {
 		this.index = index;
 		this.name = nickName;
 		this.room = room;
@@ -11,6 +11,11 @@ class Player {
 		this.roadsUsed = 0;
 		this.housesUsed = 0;
 		this.citiesUsed = 0;
+		this.uuid = uuid;
+	}
+
+	getUuid() {
+		return this.uuid;
 	}
 
 	getPlayerIndex() {

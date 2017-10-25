@@ -6,7 +6,7 @@ class PlayerCards {
 		this.playerIndex = index;
 		this.cardData = {};
 		for (var resource in order) {
-			this.cardData[order[resource]] = 0;
+			this.cardData[order[resource]] = 10;
 		}
 	}
 
@@ -78,19 +78,54 @@ class PlayerCards {
 	}
 
 	canBuyDevelopmentCard() {
-		return this.getResourceAmount(2) > 0 && this.getResourceAmount(3) > 0 && this.getResourceAmount(4) > 0;
+	 	if (this.getResourceAmount(2) > 0 && this.getResourceAmount(3) > 0 && this.getResourceAmount(4) > 0) {
+	 		return true;
+	 	}
+	 	return false;
+	}
+
+	buyDevelopmentCard() {
+		this.subtractResourceAmount(2, 1);
+	 	this.subtractResourceAmount(3, 1);
+	 	this.subtractResourceAmount(4, 1);
 	}
 
 	canBuyRoad() {
-		return this.getResourceAmount(0) > 0 && this.getResourceAmount(1) > 0;
+		if (this.getResourceAmount(0) > 0 && this.getResourceAmount(1) > 0) {
+			return true;
+		}
+		return false;
+	}
+
+	buyRoad() {
+		this.subtractResourceAmount(0, 1);
+		this.subtractResourceAmount(1, 1);
 	}
 
 	canBuySettlement() {
-		return this.getResourceAmount(0) > 0 && this.getResourceAmount(1) > 0 && this.getResourceAmount(2) > 0 && this.getResourceAmount(3) > 0;
+		if (this.getResourceAmount(0) > 0 && this.getResourceAmount(1) > 0 && this.getResourceAmount(2) > 0 && this.getResourceAmount(3) > 0) {
+	 		return true;
+		}
+		return false;
+	}
+
+	buySettlement() {
+		this.subtractResourceAmount(0, 1);
+	 	this.subtractResourceAmount(1, 1);
+	 	this.subtractResourceAmount(2, 1);
+	 	this.subtractResourceAmount(3, 1);
 	}
 
 	canBuyCity() {
-		return this.getResourceAmount(3) >= 2 && this.getResourceAmount(4) >= 3;
+		if (this.getResourceAmount(3) >= 2 && this.getResourceAmount(4) >= 3) {
+			return true;
+		}
+		return false;
+	}
+
+	buyCity() {
+		this.subtractResourceAmount(3, 2);
+	 	this.subtractResourceAmount(4, 3);
 	}
 
 	hasKnight() {

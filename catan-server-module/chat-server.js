@@ -14,27 +14,41 @@ exports.onConnection = function(socket, fieldio) {
 
 	handleMessageBroadcast(socket, nickNames);
 	handleNameChangeAttempts(io, socket, nickNames, namesUsed);
-	handleRoomJoining(socket);
+	handleRoomJoining(io, socket);
 
 	socket.on('rooms', function() {
 		socket.emit('rooms', io.sockets.adapter.rooms);
 	});
 
 	handleUserDisconnection(socket, nickNames, namesUsed);
-	// socket.leave(socket.id); //Added this because sockets join a room of their own socket id.
+	socket.leave(socket.id); //Added this because sockets join a room of their own socket id.
 	handleHousePlacement(io, socket, currentRoom);
 	handleRoadPlacement(io, socket, currentRoom);
 	handleRobberPlacement(io, socket, currentRoom);
 	handleBeginTurn(io, socket, currentRoom);
 	handleShineRoads(io, socket, currentRoom);
-	handleShineSettlements(socket, currentRoom);
+	handleShineSettlements(io, socket, currentRoom);
 	handleShineCities(socket, currentRoom);
 	handleBuyDevelopmentCard(io, socket, currentRoom);
 	handleMonopoly(io, socket, currentRoom);
 	handleYearOfPlenty(io, socket, currentRoom);
 	handleRobberEvent(io, socket, currentRoom)
 	handleResumeGame(io, socket, currentRoom);
+	handleJoinCatanGame(io, socket, currentRoom, nickNames);
+	handleBeginCatanGame(io, socket, currentRoom, nickNames);
 };
+
+function handleBeginCatanGame(io, socket, currentRoom, nickNames) {
+	socket.on('beginCatanGame', function(beginGameData) {
+		catanServer.beginCatanGame(io, socket, currentRoom[socket.id], beginGameData['uuid']);
+	});
+}
+
+function handleJoinCatanGame(io, socket, currentRoom, nickNames) {
+	socket.on('joinCatanGame', function(joinGameData) {
+		catanServer.handlePlayerJoin(io, socket, currentRoom[socket.id], nickNames[socket.id], joinGameData['uuid']);
+	});
+}
 
 function handleResumeGame(io, socket, currentRoom) {
 	socket.on('resumeGame', function(robbedData) {
@@ -72,9 +86,9 @@ function handleShineCities(socket, currentRoom) {
 	})
 }
 
-function handleShineSettlements(socket, currentRoom) {
+function handleShineSettlements(io, socket, currentRoom) {
 	socket.on('shineSettlements', function(settlementInfo) {
-		catanServer.handleShineSettlements(socket, currentRoom[socket.id], settlementInfo);
+		catanServer.handleShineSettlements(io, socket, currentRoom[socket.id], settlementInfo);
 	});
 }
 
@@ -121,9 +135,8 @@ function handleRegister(io, socket, nickNames, namesUsed) {
 			console.log("New Nickname ", nickNames[socket.id], "new Room ", currentRoom[socket.id], "List of names used ", namesUsed);
 		}
 		
-		joinRoom(socket, 'Lobby');
-		catanServer.handlePlayerJoin(io, socket, currentRoom[socket.id], nickNames[socket.id], uuid);
-		catanServer.handleBoardCreation(socket, uuid);
+		joinRoom(socket, currentRoom[socket.id] == null ? 'Lobby' : currentRoom[socket.id]);
+		catanServer.handleBoardCreation(socket, currentRoom[socket.id], uuid); //Will have: refresh/// Won't have: first time
 
 	});
 }
@@ -131,6 +144,7 @@ function handleRegister(io, socket, nickNames, namesUsed) {
 function handleBeginTurn(io, socket, currentRoom) {
 	socket.on("beginTurn", function(turnInfo) {
 		//TODO people can activate development cards before roll.
+		console.log('BEGIN TURN');
 		catanServer.handleBeginTurn(io, socket, currentRoom[socket.id], turnInfo);
 	});
 }
@@ -168,6 +182,7 @@ function joinRoom(socket, room) {
 	socket.join(room);
 	currentRoom[socket.id] = room;
 	socket.emit("joinResult", {room:room});
+	console.log('join room, currentRoom ', room);
 	socket.broadcast.to(room).emit('message', {text: nickNames[socket.id] + ' has joined ' + room + "."});
 
 	var usersInRoom = io.sockets.adapter.rooms[room].sockets; 
@@ -220,12 +235,17 @@ function handleMessageBroadcast(socket, nickNames) {
 	});
 }
 
-function handleRoomJoining(socket) {
+function handleRoomJoining(io, socket) {
 	socket.on('join', function(room) {
-		console.log("Chat Server: In Join Function new room: ", room, " current Room: ", currentRoom[socket.id]);
+		if (room['newRoom'] == currentRoom[socket.id]) {
+			socket.emit('message', {'text': "Already in room: " + room['newRoom']});
+			return;
+		}
 		socket.leave(currentRoom[socket.id]);
 		joinRoom(socket, room["newRoom"]);
-		catanServer.handleBoardCreation(socket, currentRoom);
+		var uuid = uuids[nickNames[socket.id]];
+		catanServer.handleUserLeaveRoom(io, uuid);
+		catanServer.handleBoardCreation(socket, currentRoom[socket.id], null); //Won't have a uuid at this point
 	});
 }
 
@@ -237,13 +257,16 @@ function handleUserDisconnection(socket, nickNames) {
 
 			if (disconnecting.indexOf(nickNames[socket.id]) != -1) {
 				//Delete nickname, nickname to uuid, names used, current room of that socket
+				catanServer.handleUserLeaveRoom(io, uuids[nickNames[socket.Id]]);
 				disconnectOldSocket(socket.id, nickNames);
 			}
 
-		}, 10000)
+		}, 60000)
 	});
 }
 
+//This is for when a socket disconnects, does not mean that the user is permanently disconnected
+//So Want user to leave room is user has timed out, in handleUserDisconnection
 function disconnectOldSocket(socketId, nickNames) {
 	console.log("Disconnecting ", socketId);
 	var index = disconnecting.indexOf(nickNames[socketId]);

@@ -7,6 +7,7 @@ class Hexagon {
         this.vertices = [];
         this.center = center;
         this.diceNumber = number;
+        this.neighbors = [];
     }
 
     getCircle() {
@@ -48,10 +49,20 @@ class Hexagon {
     getCenter() {
         return this.center;
     }
- //    this.isRobbered = function(robberIndex) {
-    //  return this.index == robberIndex;
-    // }
 
+    getNeighbors() {
+        return this.neighbors;
+    }
+
+    addNeighbor(neighborHexagonIndex) {
+        if (this.neighbors.indexOf(neighborHexagonIndex) == -1 && neighborHexagonIndex != this.getIndex()) {
+            this.neighbors.push(neighborHexagonIndex);
+        }
+    }
+
+    isRed() {
+        return this.getDiceNumber() == 6 || this.getDiceNumber() == 8;
+    }
 };
 
 module.exports = Hexagon;

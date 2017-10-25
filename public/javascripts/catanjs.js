@@ -23,7 +23,8 @@ var hexagonColors = ["rgba(0,102,0,0.5)", "rgba(255,0,0,0.5)", "rgba(0,255,0,0.5
 var playerColors = ["red", "blue", "purple", "green"];
 var devCards = ['Knight', 'Road building', 'Monopoly', 'Year of plenty', 'Victory point'];
 
-var playerIndex = 0;
+var playerIndex = -1;
+var playerTurn = -1;
 
 /*currentAction = {
     -1: no action
@@ -52,6 +53,8 @@ $(document).ready(function() {
     socket.emit('register', localStorage.getItem('catan_uuid'));
 
     socket.on('newBoard', function(serverData) {
+        playerIndex = serverData["playerIndex"];
+        playerTurn = serverData['playerTurn'];
         svgContainer.selectAll("*").remove();
         createHexagonsUi(serverData["hexagons"]);
         createVerticesUi(serverData["vertices"]);
@@ -64,16 +67,17 @@ $(document).ready(function() {
         createActionsUi();
         createPortsUi(serverData['ports']);
         createDevCardUi(serverData['players'].map(p => p.cards).filter(cD => cD.playerIndex == playerIndex)[0]);
-
-        playerIndex = serverData["playerIndex"];
+        createBeginGameUi(socket, serverData['inGame'], serverData['gameStarted']);
+        updateDiceUi(serverData['dice']);
 
         addOnClickListenerToNumberCircles(socket); //Robber click
         addOnClickListenerToResources(socket);
         addOnClickListenerToVertices();
         addOnClickListenerToRoads(socket);
-
-    //     //moveCirclesInFrontOfText();   // Either this or make a event listener for the text.
+        
         moveRobberToTheFront();
+        updateOpacityTurn(playerTurn);
+        restoreCurrentAction(serverData['gameStarted'], serverData['inGame']);
     });
 
     handleHousePlacement(socket);
@@ -90,7 +94,158 @@ $(document).ready(function() {
     handleShineRobberSettlements(socket);
     handleSevenDeadlySins(socket);
     handleGameOver(socket);
+    handleJoinCatanGame(socket);
+    handleBeginGame(socket);
 });
+
+function handleBeginGame(socket) {
+    socket.on('beginGame', function(beginGameData) {
+        if (playerIndex > -1) {
+            svgContainer.selectAll('.beginGame').remove();
+            svgContainer.selectAll('.beginGameText').remove();
+        } else {
+            window.svgContainer.selectAll('.beginGameText')[0][0].innerHTML = 'Spectating'
+        }
+    });
+}
+
+function updateDiceUi(diceInfo) {
+    if (diceInfo == null) {
+        return;
+    }
+    var dice1 = document.getElementById("dice1");
+    var dice2 = document.getElementById("dice2");
+    dice1.src="dice-rolling-" + diceInfo[0].toString() + ".png";
+    dice2.src="dice-rolling-" + diceInfo[1].toString() + ".png";
+}
+
+function restoreCurrentAction(gameStarted, inGame) {
+    console.log('gameStarted', gameStarted, 'inGame', inGame, 'playerTurn', playerTurn, 'playerIndex', playerIndex);
+
+    if (!gameStarted) {
+        console.log('Game not started, lets reset the currentAction');
+        setCurrentAction(-1, null);
+    }
+
+    if (gameStarted && inGame && (playerTurn == playerIndex || parseInt(localStorage.currentAction) == 4)) {
+        window.currentAction = parseInt(localStorage.currentAction);
+        var data = localStorage.currentActionData != 'undefined' ? JSON.parse(localStorage.currentActionData) : null;
+        console.log(data);
+        switch(currentAction) {
+            case 0: //0: knight 
+                console.log('Knight Restoration');
+                //2 stages, 
+                    //1) choose square robber blink
+                    //2) choose settlement to rob settlement blink
+                playKnight();
+                break;
+            case 1: //1: road building,
+                console.log('Road Building Restoration');
+                window.roadBuildingCount = data;
+                playRoadBuilding(); //Have to use roadBuilding count
+                break;
+            case 2: //2: monopoly,
+                console.log('Monopoly Restoration');
+                playMonopoly();
+                break;
+            case 3: //3: year of plenty,
+                console.log('Year of Plenty Restoration'); //Can have them just repick both
+                playYearOfPlenty();
+                break;
+            case 4: //4: robber,
+                console.log('Robber Restoration');
+                prepareGettingRobbered(data, true)
+                break;
+            case 5: //5: build road action,
+                console.log('Build Road Action Restoration');
+                prepareShineRoads(data, true);
+                break;
+            case 6: //6: build city action,
+                console.log('Build City Restoration');
+                prepareShineCities(data, true);
+                break;
+            case 7: //7: build settlement action,
+                console.log('Settlement Restoration');
+                prepareShineSettlements(data, true);
+                //Data is which locations are clickable
+                break;
+            case 8: //8: trading
+                console.log('Trading Restoration');
+                break;
+            case 9: //Knight picking victim
+                prepareShineRobberSettlements(data);
+                break;
+            default:
+                break;
+        }
+    }
+    console.log('what is the currentAction', currentAction);
+}
+
+function setCurrentAction(value, data) {
+    window.currentAction = value
+    localStorage.currentAction = value;
+    localStorage.currentActionData = JSON.stringify(data);
+}
+
+function handleJoinCatanGame(socket) {
+    socket.on('joinedGame', function(playerIndex) {
+        window.playerIndex = playerIndex;
+    });
+}
+
+function createBeginGameUi(socket, inGame, gameStarted) {
+    svgContainer.selectAll('.beginGame').data([0]).enter()
+        .append('rect')
+        .attr('class', 'beginGame')
+        .attr('x', containerWidth * 2/5)
+        .attr('y', containerHeight/100)
+        .attr('width', containerWidth/5)
+        .attr('height', containerHeight/10)
+        .attr('fill', 'white')
+        .attr("style", function() {
+            return gameStarted && inGame ? ""  : "outline: thin solid red;"
+        })
+        .on('click', function() {
+            console.log('Join Catan Game');
+            var text = window.svgContainer.selectAll('.beginGameText')[0][0].innerHTML;
+
+            if (text == "Spectating" || text == "") {
+                return;
+            }
+            var messageType = text.indexOf('Join') != -1 ? 'joinCatanGame' : 'beginCatanGame';
+            socket.emit(messageType, {"uuid": localStorage.getItem('catan_uuid')});
+            if (messageType == 'joinCatanGame') {
+                window.svgContainer.selectAll('.beginGameText')[0][0].innerHTML = 'Begin Game'
+            }
+        });
+    svgContainer.selectAll('.beginGameText').data(svgContainer.selectAll('.beginGame')[0]).enter()
+        .append('text')
+        .attr('class', 'beginGameText')
+        .attr('x', function(d) {
+            return parseInt(d.attributes.x.value) + parseInt(d.attributes.width.value/8);
+        })
+        .attr('y', function(d) {
+            return parseInt(d.attributes.y.value) + parseInt(d.attributes.height.value*2/3);
+        })
+        .text(function() {
+            if (!gameStarted && inGame) {
+                return 'Begin Game';
+            }
+            if (gameStarted && inGame) {
+                return '';
+            }
+            if (gameStarted && !inGame) {
+                return 'Spectating';
+            }
+            if (!gameStarted && !inGame) {
+                return "Join Game";
+            }
+        })
+        .attr('font-size', radius/2 + "px")
+        .attr('fill', "black")
+        .style('pointer-events', 'none');
+}
 
 function handleGameOver(socket) {
     socket.on('gameOver', function(winner) {
@@ -105,23 +260,29 @@ function handleGameOver(socket) {
                 return 'Congratulations ' + d.name;
             })
             .attr('fill', 'black')
-            .attr('font-size', '40px');
+            .attr('font-size', '40px')
+            .style('pointer-events', 'none');
     });
 }
 
 function handleSevenDeadlySins(socket) {
     socket.on('7deadlySins', function(cardData) {
-        var numResources = getNumberOfResources(cardData, playerIndex);
-        if (numResources > 7) {
-            console.log('being robbered');
-            makeEdgesBlinkResource();
-            resourcesToSteal = Math.floor(numResources / 2);
-            currentAction = 4; //Robber time!
-        } else {
-            console.log('not rich enough to get stole from');
-            socket.emit('resumeGame', {'uuid': localStorage.getItem('catan_uuid'), 'cards': null});
-        }
+        prepareGettingRobbered(cardData, false);
     });
+}
+
+function prepareGettingRobbered(cardData, isRefresh) {
+    var numResources = getNumberOfResources(cardData, playerIndex);
+    if (numResources > 7) {
+        console.log('being robbered');
+        makeEdgesBlinkResource();
+        resourcesToSteal = Math.floor(numResources / 2);
+        setCurrentAction(4, cardData); //Robber time!
+    } else {
+        console.log('not rich enough to get stole from');
+        socket.emit('resumeGame', {'uuid': localStorage.getItem('catan_uuid'), 'cards': null});
+        setCurrentAction(-1, null);
+    }
 }
 
 function addOnClickListenerToResources() {
@@ -134,7 +295,7 @@ function addOnClickListenerToResources() {
                 if (currentAction == 2) { //Monopoly
                     socket.emit("monopoly", {"resource": resourceIndex, "uuid": localStorage.getItem('catan_uuid')});
                     d3.selectAll('.resource').transition().duration(1000).style("stroke", "rgb(0,0,0)");
-                    currentAction = -1;
+                    setCurrentAction(-1);
                     window.svgContainer.selectAll('.devCardAction')[0][2].attributes.fill.value = "white";
                     return;
                 }
@@ -148,21 +309,20 @@ function addOnClickListenerToResources() {
                         window.resourcesPicked = [];
                         window.svgContainer.selectAll('.resource').transition().duration(1000).style("stroke", "rgb(0,0,0)");
                         window.svgContainer.selectAll('.devCardAction')[0][3].attributes.fill.value = "white";
-                        window.currentAction = -1;
+                        setCurrentAction(-1);
                     }
                 }
 
                 if (currentAction == 4 && resourcesToSteal > 0 && resourceAmount > 0) {
                     window.resourcesPicked.push(resourceIndex);
                     window.svgContainer.selectAll('.resourceText')[0][resourceIndex].innerHTML = resourceAmount - 1;
-                    console.log('robbered resources', window.resourcesPicked);
                     window.resourcesToSteal -= 1;
 
                     if (window.resourcesToSteal == 0) {
                         socket.emit('resumeGame', {'uuid': localStorage.getItem('catan_uuid'), 'cards': window.resourcesPicked});
                         window.resourcesPicked = [];
                         window.resourcesToSteal = 0;
-                        window.currentAction = -1; //7 deadly sins
+                        setCurrentAction(-1); //7 deadly sins
                         window.svgContainer.selectAll('.resource').transition().duration(1000).style("stroke", "rgb(0,0,0)");
                     }
                 }
@@ -181,7 +341,6 @@ function createDevCardUi(cardData) {
         playYearOfPlenty,
         doNothing];
 
-    console.log('createDevCardUi', cardData);
     svgContainer.selectAll(".devCardAction").data(devCardMethods).enter()
         .append('rect')
         .attr('class', 'devCardAction')
@@ -194,7 +353,7 @@ function createDevCardUi(cardData) {
         .attr('fill', 'white')
         .attr("style", "outline: thin solid red;")
         .on("click", function(d, i) {
-            if (this.attributes.fill.value == "white" && currentAction < 0) {
+            if (this.attributes.fill.value == "white" && currentAction < 0 && playerIndex > -1) {
                 d(); //d is a reference to a function
             }
             d3.event.stopPropagation();
@@ -213,8 +372,10 @@ function createDevCardUi(cardData) {
         .attr('fill', 'black')
         .attr('font-size', (radius/4).toString() + "px")
         .text(function(d, i) {
-            return actions[i] + " -- " + cardData['cardData'][devCards[i]];
-        });
+            var numDevCards = cardData == null ? 0 : cardData['cardData'][devCards[i]];
+            return actions[i] + " -- " + numDevCards;
+        })
+        .style('pointer-events', 'none');
 }
 
 function doNothing() {
@@ -222,9 +383,9 @@ function doNothing() {
 }
 
 function playKnight() {
-    if (svgContainer.selectAll('.devCardText')[0][0].innerHTML.indexOf(' 0') == -1) {
+    if (svgContainer.selectAll('.devCardText')[0][0].innerHTML.indexOf(' 0') == -1 || window.currentAction == 0) {
         svgContainer.selectAll('.devCardAction')[0][0].attributes.fill.value = window.playerColors[window.playerIndex];;
-        currentAction = 0;
+        setCurrentAction(0);
         makeEdgesBlinkRobber('#robber');
     }
 }
@@ -232,18 +393,19 @@ function playKnight() {
 function playRoadBuilding() {
     svgContainer.selectAll('.devCardAction')[0][1].attributes.fill.value = window.playerColors[window.playerIndex];;
     console.log('road building');
+    setCurrentAction(1, window.roadBuildingCount); //Road building action
     shineRoads("road building"); //Current action will be set in shine roads because another action also creates roads
 }
 
 function playMonopoly() {
-    svgContainer.selectAll('.devCardAction')[0][2].attributes.fill.value = window.playerColors[window.playerIndex];;
-    currentAction = 2;
+    svgContainer.selectAll('.devCardAction')[0][2].attributes.fill.value = window.playerColors[window.playerIndex];
+    setCurrentAction(2, null);
     makeEdgesBlinkResource();
 }
 
 function playYearOfPlenty() {
     svgContainer.selectAll('.devCardAction')[0][3].attributes.fill.value = window.playerColors[window.playerIndex];;
-    currentAction = 3;
+    setCurrentAction(3);
     makeEdgesBlinkResource();
 }
 
@@ -291,8 +453,8 @@ function createCardCountsUi(cardData) {
         .attr('y', function(d, i) {
             return parseInt(d.attributes.y.value) + radius/4;
         })
+        .style('pointer-events', 'none');
 
-    console.log('createCardCountsUi', cardData);
     svgContainer.selectAll('.devCardCount').remove();
     svgContainer.selectAll('.devCardCount')
         .data(svgContainer.selectAll('.player')[0])
@@ -309,6 +471,7 @@ function createCardCountsUi(cardData) {
         .attr('y', function(d, i) {
             return parseInt(d.attributes.y.value) + 2 * radius/4;
         })
+        .style('pointer-events', 'none');
 }
 
 function createPlayerBoxesUi(players) {
@@ -322,6 +485,7 @@ function createPlayerBoxesUi(players) {
     ];
     players.sort(comparePlayers);
 
+    svgContainer.selectAll('.player').remove();
     svgContainer.selectAll('.player').data(players)
         .enter().append("rect")
         .attr("class", "player")
@@ -338,6 +502,9 @@ function createPlayerBoxesUi(players) {
         })
         .attr('id', function(d, i) {
             return 'player'+ i;
+        })
+        .attr('fill-opacity', function(d, i) {
+            return playerTurn == d.index ? 1 : 0.5;
         });
 
     createCardCountsUi(players.map(p => p.cards));
@@ -429,7 +596,6 @@ function createPortsUi(ports) {
         portCircles.push([newX, newY]);
     };  
 
-    console.log(ports);
     svgContainer.selectAll('.portCircle').data(portCircles).enter()
         .append('circle')
         .attr('class', 'portCircle')
@@ -447,7 +613,7 @@ function createPortsUi(ports) {
 }
 
 function createActionsUi() {
-    var actions = ["Build Road", "Build City", "Build Settlement", "Buy Development Card", "Trade", "End Turn"];
+    var actions = ["Build Road", "Build City", "Build Settlement", "Buy Development Card", "Trade (Doesn't work yet)", "End Turn"];
     var actionMethods = [
         shineRoads,
         shineCities,
@@ -467,7 +633,7 @@ function createActionsUi() {
         .attr('fill', 'white')
         .attr("style", "outline: thin solid red;")
         .on("click", function(d, i) {
-            if (this.attributes.fill.value == "white" && currentAction < 0) {
+            if (this.attributes.fill.value == "white" && currentAction < 0 && playerIndex > -1) {
                 d(); //d is a reference to a function
             } else if (currentAction == i + 5) {
                 d();
@@ -488,7 +654,8 @@ function createActionsUi() {
         .attr('font-size', (radius/4).toString() + "px")
         .text(function(d, i) {
             return actions[i];
-        });
+        })
+        .style('pointer-events', 'none');
 }
 
 function openTradeWindow() {
@@ -497,22 +664,16 @@ function openTradeWindow() {
 
 //Type will be "road building" if it's for the intial road building, null else
 function shineRoads(type) {
-    if (type == "road building") {
-        currentAction = 1; //Road building action
-    }
-
     socket.emit('shineRoads', {"playerIndex": playerIndex, "uuid": localStorage.getItem('catan_uuid'), "type": type});
 }
 
 function shineCities() {
-    window.svgContainer.selectAll('.action')[0][1].attributes.fill.value = window.playerColors[window.playerIndex];;
     socket.emit('shineCities', {"playerIndex": playerIndex, "uuid": localStorage.getItem('catan_uuid')});
 }
 
-//Type is either beginning game or in game
+//Type 0: begin game, type 1: in game
 function shineSettlements() {
-    window.svgContainer.selectAll('.action')[0][2].attributes.fill.value = window.playerColors[window.playerIndex];;
-    socket.emit('shineSettlements', {'playerIndex': playerIndex, 'type': 0, "uuid": localStorage.getItem('catan_uuid')});
+    socket.emit('shineSettlements', {'playerIndex': playerIndex, 'type': 1, "uuid": localStorage.getItem('catan_uuid')});
 }
 
 function buyDevelopmentCard() {
@@ -581,8 +742,6 @@ function handleCardDistribution(socket) {
 }
 
 function getNumberOfDevCards(cardData, key) {
-
-    console.log('number of dev cards', cardData);
     var totalCards = 0;
     devCards.forEach(function(resource, i) { //For each dict of cards per player
         totalCards += cardData[key].cardData[resource];
@@ -624,7 +783,7 @@ function createPlayerResourcesUi(cardData) {
         .enter().append('text')
         .attr('class', 'resourceText')
         .text(function(d, i) {
-            return cardData['cardData'][resourceEntries[i]];
+            return cardData == null ? 0 : cardData['cardData'][resourceEntries[i]];
         })
         .attr('font-size', (radius).toString()+"px")
         .attr('fill', 'black')
@@ -634,6 +793,8 @@ function createPlayerResourcesUi(cardData) {
         .attr('y', function(d, i) {
             return parseInt(d.attributes.y.value) + 1.1 * radius;
         })
+        .style('pointer-events', 'none');
+
 }
 
 function beginNewTurn() {
@@ -675,17 +836,23 @@ function addOnClickListenerToRoads(socket) {
                     if (this.attributes.stroke.value == "white") {
                         this.attributes.stroke.value = window.playerColors[playerIndex];
                         var id = parseInt(this.id.substring(this.id.indexOf('d') + 1));
-                        socket.emit("road", {"id": id, "uuid": localStorage.getItem('catan_uuid')}); //road+id
+                        socket.emit('road', 
+                            {
+                                "id": id,
+                                "uuid": localStorage.getItem('catan_uuid'),
+                                'type': window.currentAction == 1
+                            }); //road+id
 
                         if (window.currentAction == 1) { //Road Building
                             window.roadBuildingCount += 1;
+                            setCurrentAction(1, window.roadBuildingCount);
                             if (window.roadBuildingCount == 2) { //Second Road
-                                window.currentAction = -1;
+                                setCurrentAction(-1, null);
                                 window.roadBuildingCount = 0;
                                 window.svgContainer.selectAll('.devCardAction')[0][1].attributes.fill.value = "white";
                             }
                         } else {
-                            currentAction = -1; // Building regular road
+                            setCurrentAction(-1); // Building regular road
                             window.svgContainer.selectAll('.action')[0][0].attributes.fill.value = "white";
                         }
 
@@ -713,7 +880,7 @@ function addOnClickListenerToVertices() {
                 var vertexId = parseInt(circle.id.substring(circle.id.indexOf('x') + 1));
                 if (this.attributes.fill.value == "white" || window.blinkingHouses.indexOf(vertexId) != -1) {
                     var locationInfo = {"id": vertexId, "uuid": localStorage.getItem('catan_uuid')}; //vertex+id
-                    if (currentAction == 0) { //Robber
+                    if (currentAction == 9) { //Robber picking a settlement to steal from
                         socket.emit("robberEvent", locationInfo);
                         window.svgContainer.selectAll('.devCardAction')[0][0].attributes.fill.value = "white";
                         window.blinkingHouses = [];
@@ -732,7 +899,7 @@ function addOnClickListenerToVertices() {
                         }
                     });
 
-                    currentAction = -1; //End House Building (includes cities and settlements) action or Robber Action
+                    setCurrentAction(-1); //End House Building (includes cities and settlements) action or Robber Action
                 }
             }, false);
         }());
@@ -844,7 +1011,7 @@ function createVerticesUi(vertices) {
         .attr('fill', function(d, i) {
             return vertices[i].houseType == 2 ? playerColors[vertices[i].playerIndex]: "rgba(0,248,220,0)";
         })
-        .style('pointer-events', 'none')
+        .style('pointer-events', 'none');
 }
 
 function createRoadsUi(roads) {
@@ -888,7 +1055,8 @@ function createNumbersUi(hexagonServerData) {
         .attr("fill", function(d) {
             return d.diceNumber == 6 || d.diceNumber == 8 ? "red" : "black";
         })
-        .style("text-anchor", "middle");
+        .style("text-anchor", "middle")
+        .style('pointer-events', 'none');
 }
 
 function hexagon(radius) {
@@ -941,91 +1109,115 @@ function handleVictoryPointChange(socket) {
 
 function handleShineCities(socket) {
     socket.on('shineCities', function(shineCities) {
-        if (shineCities.length == 0 || currentAction == 6) { //No cities to show or already showing cities
-            window.svgContainer.selectAll('.action')[0][1].attributes.fill.value = "white";
-            currentAction = -1;
-        } else {
-            currentAction = 6;
-        }
-        shineHouseLocations(socket, shineCities, 1);
+        prepareShineCities(shineCities, false);
     });
 }
 
+function prepareShineCities(shineCities, isRefresh) {
+    window.svgContainer.selectAll('.action')[0][1].attributes.fill.value = window.playerColors[window.playerIndex];
+    if (shineCities.length == 0 || (currentAction == 6 && !isRefresh)) { //No cities to show or already showing cities
+        window.svgContainer.selectAll('.action')[0][1].attributes.fill.value = "white";
+        setCurrentAction(-1, null);
+    } else {
+        setCurrentAction(6, shineCities);
+    }
+    shineHouseLocations(socket, shineCities, 1);
+}
+
 function handleShineSettlements(socket) {
-    socket.on('shineSettlements', function(shineSettlements) {
-        if (shineSettlements.length == 0 || currentAction == 7) { //No houses to show or already in house building action
-            currentAction = -1;
+    socket.on('shineSettlements', function(shineSettlementsResponse) {
+        prepareShineSettlements(shineSettlementsResponse, false);
+    });
+}
+
+function prepareShineSettlements(shineSettlementsResponse, isRefresh) {
+    if (shineSettlementsResponse['uuid'] == localStorage.catan_uuid) {
+        window.svgContainer.selectAll('.action')[0][2].attributes.fill.value = window.playerColors[window.playerIndex];
+        console.log('prepareShineSettlements');
+        var shineSettlements = shineSettlementsResponse['shineSettlements'];
+        //If it's a refresh then don't set back to white and don't set action back to -1
+        if (shineSettlements.length == 0 || (currentAction == 7 && !isRefresh)) { //No houses to show or already in house building actionMethods
+            setCurrentAction(-1, null);
             window.svgContainer.selectAll('.action')[0][2].attributes.fill.value = "white";
         } else {
-            currentAction = 7;
+            setCurrentAction(7, shineSettlementsResponse);
         }
         shineHouseLocations(socket, shineSettlements, 0);
-    });
+    }
 }
 
 function handleShineRobberSettlements(socket) {
     socket.on('shineRobberSettlements', function(shineSettlements) {
-        svgContainer.selectAll('#robber').transition().duration(1000).style("stroke", "rgb(0,0,0)");
-        console.log(shineSettlements);
-        if (shineSettlements.length > 0) {
-            shineHouseLocations(socket, shineSettlements, 2);
-        } else { // If no houses there, need to end the action here
-            currentAction = -1;
-            svgContainer.selectAll('.devCardAction')[0][0].attributes.fill.value = "white";
-        }
+        prepareShineRobberSettlements(shineSettlements);
     });
 }
 
+function prepareShineRobberSettlements(shineSettlements) {
+    setCurrentAction(9, shineSettlements);
+    svgContainer.selectAll('#robber').transition().duration(1000).style("stroke", "rgb(0,0,0)");
+    if (shineSettlements.length > 0) {
+        shineHouseLocations(socket, shineSettlements, 2);
+    } else { // If no houses there, need to end the action here
+        setCurrentAction(-1);
+        svgContainer.selectAll('.devCardAction')[0][0].attributes.fill.value = "white";
+    }
+}
+
 function handleShineRoads(socket) {
-    socket.on("shineRoads", function(shineRoads) {
-
-        if (shineRoads.length <= 1 || currentAction == 5) { // No roads to show or already showing roads
-            currentAction = -1;
-            svgContainer.selectAll('.devCardAction')[0][1].attributes.fill.value = "white";
-            window.svgContainer.selectAll('.action')[0][0].attributes.fill.value = "white";
-        } else {
-            if (currentAction != 1) {
-                currentAction = 5; //Build road action
-                window.svgContainer.selectAll('.action')[0][0].attributes.fill.value = window.playerColors[window.playerIndex];
-            }
-        }
-
-        var roads = svgContainer.selectAll('.road')[0];
-        if (shineRoads.length != 0 && roads[shineRoads[0]].attributes.stroke.value == "white") {
-            shineRoads.forEach(function(shineRoadIndex) {
-                roads[shineRoadIndex].attributes.stroke.value = "transparent";
-            });
-        } else {
-            shineRoads.forEach(function(shineRoadIndex) {
-                roads[shineRoadIndex].attributes.stroke.value = "white";
-            });
-        }
+    socket.on('shineRoads', function(shineRoads) {
+        prepareShineRoads(shineRoads, false);
     })
+}
+
+function prepareShineRoads(shineRoads, isRefresh) {
+    if (shineRoads.length <= 1 || (currentAction == 5 && !isRefresh)) { // No roads to show or already showing roads
+        setCurrentAction(-1, null);
+        svgContainer.selectAll('.devCardAction')[0][1].attributes.fill.value = "white";
+        window.svgContainer.selectAll('.action')[0][0].attributes.fill.value = "white";
+    } else {
+        if (currentAction != 1) {
+            setCurrentAction(5, shineRoads); //Build road action
+            window.svgContainer.selectAll('.action')[0][0].attributes.fill.value = window.playerColors[window.playerIndex];
+        }
+    }
+
+    var roads = svgContainer.selectAll('.road')[0];
+    if (shineRoads.length != 0 && roads[shineRoads[0]].attributes.stroke.value == "white") {
+        shineRoads.forEach(function(shineRoadIndex) {
+            roads[shineRoadIndex].attributes.stroke.value = "transparent";
+        });
+    } else {
+        shineRoads.forEach(function(shineRoadIndex) {
+            roads[shineRoadIndex].attributes.stroke.value = "white";
+        });
+    }
 }
 
 function handleDiceRoll(socket) {
     socket.on('dice', function(diceInfo) {
-        var dice1 = document.getElementById("dice1");
-        var dice2 = document.getElementById("dice2");
-        dice1.src="dice-rolling-" + diceInfo[0].toString() + ".png";
-        dice2.src="dice-rolling-" + diceInfo[1].toString() + ".png";
+        updateDiceUi(diceInfo);
     });
 }
 
 function handleWhoseTurn(socket) {
     socket.on('whoseTurn', function(turn) {
-        var allActions = svgContainer.selectAll(".action")[0].concat(svgContainer.selectAll(".devCardAction")[0]);
-        allActions.forEach(function(boxUi) {
-            if (turn == playerIndex) {
-                boxUi.attributes.fill.value = "white"
-            } else {
-                boxUi.attributes.fill.value = "grey"
-            }
-        });
-
-        svgContainer.selectAll('.player').data(svgContainer.selectAll('.player')[0])
-            .attr('fill-opacity', function(d, i) {
-                return turn == i ? 1 : 0.5;
-            });
+        updateOpacityTurn(turn);
     });
+}
+
+function updateOpacityTurn(turn) {
+    var allActions = svgContainer.selectAll(".action")[0].concat(svgContainer.selectAll(".devCardAction")[0]);
+    playerTurn = turn;
+    allActions.forEach(function(boxUi) {
+        if (turn == playerIndex) {
+            boxUi.attributes.fill.value = "white"
+        } else {
+            boxUi.attributes.fill.value = "grey"
+        }
+    });
+
+    svgContainer.selectAll('.player').data(svgContainer.selectAll('.player')[0])
+        .attr('fill-opacity', function(d, i) {
+            return turn == i ? 1 : 0.5;
+        });
 }

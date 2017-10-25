@@ -72,17 +72,6 @@ class Vertex {
 		this.id = id;
 	}
 
-	getRoadsOfColor(color, roadsDict) {
-		var road;
-		var roads = [];
-		for (road in this.getRoads()) {
-			if (roadsDict[road].getColor() == color) {
-				roads.push(road);
-			}
-		}
-		return roads;
-	}
-
 	/** Returns a road:vertex dictionary of all roads that are of a same color connected to this one. */
 	getVerticesConnectedByColor(color, roadsDict) {
 		var i;
