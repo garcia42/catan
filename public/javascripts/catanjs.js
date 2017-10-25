@@ -6,9 +6,10 @@ var radius = 50 * scale;
 
 var svgContainer = 
     d3.select("body")
-      .append("svg")
-      .attr("width", containerWidth)
-      .attr("height", containerHeight);
+        .append("svg")
+        .attr('id', 'catanContainer')
+        .attr("width", containerWidth)
+        .attr("height", containerHeight);
 /*rsc = {
     0: WOOD 
     1: CLAY,
@@ -110,11 +111,13 @@ function handleBeginGame(socket) {
 }
 
 function updateDiceUi(diceInfo) {
-    if (diceInfo == null) {
-        return;
-    }
     var dice1 = document.getElementById("dice1");
     var dice2 = document.getElementById("dice2");
+    if (diceInfo == null) {
+        dice1.src = "";
+        dice2.src = "";
+        return;
+    }
     dice1.src="dice-rolling-" + diceInfo[0].toString() + ".png";
     dice2.src="dice-rolling-" + diceInfo[1].toString() + ".png";
 }

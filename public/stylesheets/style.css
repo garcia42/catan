@@ -1,6 +1,9 @@
-body {
+html, body {
 /*	padding: 50px;
 */	font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+	margin: 0;
+    height: 100%;
+    position: relative;
 }
 
 .button {
@@ -17,20 +20,20 @@ a {
 	color: #00B7FF;
 }
 
-#end-turn {
-	height: 100%;
-    width: 50%;
+#catanContainer {
+    z-index: 10;
     position: absolute;
-    right: 0;
-    top: 0;
-    background: green;
-    text-anchor: "middle";
+	left: 50%;
+	transform: translateX(-50%);
 }
 
 #content {
+	position: absolute;
+	z-index: 10;
 	width: 800px;
-	margin-left: auto;
-	margin-right: auto;
+	left: 50%;
+	transform: translateX(-50%);
+	bottom: 1em;
 }
 
 #room {
@@ -63,9 +66,5 @@ a {
 }
 
 #dice {
-    float:left;
-}
-
-#end-turn {
-    overflow-x:hidden;
+    float: left;
 }
