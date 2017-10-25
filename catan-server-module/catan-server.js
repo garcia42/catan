@@ -22,7 +22,6 @@ var portVertexData = {};
 var resumeGameData = {};
 var inBeginGameData = {};
 var currentRollData = {};
-var currentActionData = {}; //currentRoom -> {"currentAction: X", "data", DATA}
 
 var playerData = {}; //uuid to playerData
 var playerCardData = {};
@@ -47,6 +46,7 @@ exports.handleBoardCreation = function createBoard(socket, currentRoom, uuid) {
         resumeGameData[currentRoom] = [];
         inBeginGameData[currentRoom] = -2;
         currentRollData[currentRoom] = null;
+        robberData[currentRoom] = hexagonData[currentRoom].map(h => h.getResource()).indexOf(5); //5 is the desert
 	}
 
 	console.log("Emitting Hexagons to Client ", uuid);
@@ -169,7 +169,9 @@ function createDevelopmentCards() {
 //Only method that needs to know currentRoom, others can get it from uuid
 //Method will include playerIndex, created by chat server because it has more to do with joining and exiting chat rooms
 exports.handlePlayerJoin = function handlePlayerJoin(io, socket, currentRoom, nickName, uuid) {
+    console.log('Player trying to join', uuid);
     if (playerData[uuid] == null && inBeginGameData[currentRoom] == -2) {
+        console.log('Player has Joined', uuid);
         createPlayerDataObject(currentRoom, nickName, uuid);
         socket.emit('joinedGame', playerData[uuid].getPlayerIndex());
         emitPlayersToRestOfRoom(io, currentRoom);
@@ -225,7 +227,6 @@ function createHexagonObjects(radius, currentRoom) {
         count += 1;
     }//for i
 
-    robberData[currentRoom] = hexagons.map(h => h.getResource()).indexOf(5); //5 is the desert
     return hexagons;
 }
 
@@ -810,15 +811,21 @@ exports.handleRobberEvent = function(io, socket, currentRoom, robberInfo) {
 }
 
 exports.handleUserLeaveRoom = function(io, uuid) {
-    console.log('handleUserLeaveRoom', playerData[uuid]);
     if (playerData[uuid] == null) {
         return;
     }
+    console.log('User Leaving Room', uuid);
     var oldRoom = playerData[uuid].getRoom();
     var oldIndex = roomData[oldRoom].map(p => p.getUuid()).indexOf(uuid);
     roomData[oldRoom].splice(oldIndex, 1);
     playerData[uuid] = null;
-    emitPlayersToRestOfRoom(io, oldRoom);
+    if (roomData[oldRoom].length > 0) {
+        emitPlayersToRestOfRoom(io, oldRoom);
+    } else {
+        console.log('Erase old game');
+        hexagonData[oldRoom] = null;
+        roomData[oldRoom] = null;
+    }
 }
 
 exports.beginCatanGame = function(io, socket, currentRoom, nickNames) {

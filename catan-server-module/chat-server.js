@@ -110,7 +110,7 @@ function handleRegister(io, socket, nickNames, namesUsed) {
 		console.log("STORED NAME", storedName);
 		if (!storedName) { //New User
 			guestNumber = assignGuestName(socket, guestNumber, nickNames, namesUsed);
-			uuids[nickNames[socket.id]] = uuid; //Nickname to uuid
+			uuids[String(nickNames[socket.id])] = uuid; //Nickname to uuid
 			console.log("NEW USER", nickNames[socket.id]);
 		} else { //They do exist, remove from disconnecting, this is the new socket of the old player
 			//nickname to this socket
@@ -257,7 +257,8 @@ function handleUserDisconnection(socket, nickNames) {
 
 			if (disconnecting.indexOf(nickNames[socket.id]) != -1) {
 				//Delete nickname, nickname to uuid, names used, current room of that socket
-				catanServer.handleUserLeaveRoom(io, uuids[nickNames[socket.Id]]);
+				var uuid = uuids[nickNames[socket.id]]
+				catanServer.handleUserLeaveRoom(io, uuid);
 				disconnectOldSocket(socket.id, nickNames);
 			}
 
