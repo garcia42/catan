@@ -5,7 +5,7 @@ var h = (Math.sqrt(3)/2);
 var radius = 50 * scale;
 
 var svgContainer = 
-    d3.select("body")
+    d3.select(".contentContainer")
         .append("svg")
         .attr('id', 'catanContainer')
         .attr("width", containerWidth)

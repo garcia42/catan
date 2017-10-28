@@ -36,27 +36,30 @@
         	<img id="dice2">
         </div>
 
-        <script type="text/javascript" src="/javascripts/catanjs.js"></script>
+        <div class="contentContainer">
 
-        <div id='content'>
+            <script type="text/javascript" src="/javascripts/catanjs.js"></script>
+            
+            <div id='content'>
+                <div id='room'></div>
+                <div id='room-list'></div>
+                <div id='messages'></div>
 
-            <div id='room'></div>
-            <div id='room-list'></div>
-            <div id='messages'></div>
+                <form id="send-form">
+                    <input id="send-message"/>
+                    <input id='send-button' type="submit" value='Send' />
 
-            <form id="send-form">
-                <input id="send-message"/>
-                <input id='send-button' type="submit" value='Send' />
-
-                <div id='help'>
-                    Chat commands:
-                    <ul>
-                        <li>Change nickname: <code>/nick [username]</code></li>
-                        <li>Join/Create room: <code>/join [room name]</code></li>
-                    </ul>
-                </div>
-            </form>
+                    <div id='help'>
+                        Chat commands:
+                        <ul>
+                            <li>Change nickname: <code>/nick [username]</code></li>
+                            <li>Join/Create room: <code>/join [room name]</code></li>
+                        </ul>
+                    </div>
+                </form>
+            </div>
         </div>
+
     </body>
 
 </html>
@@ -70,6 +73,11 @@ Trading
 Use a knight before roll
 
 Small --------
+When spectator still in game but last player left
+shouldnt be able to build road through settlement
+knight move when 7 rolled
+can't use dev card on turn you got it
+move the chat down to most recent message
 
 Not necessary for first time use ----------
 Move dice into the svg
