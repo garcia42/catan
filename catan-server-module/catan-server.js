@@ -179,7 +179,7 @@ exports.handlePlayerJoin = function handlePlayerJoin(io, socket, currentRoom, ni
 }
 
 function emitPlayersToRestOfRoom(io, currentRoom) {
-    console.log('emitting players to room', currentRoom, roomData[currentRoom])
+    // console.log('emitting players to room', currentRoom, roomData[currentRoom])
     io.sockets.in(currentRoom).emit('newPlayer', roomData[currentRoom]);
     // socket.broadcast.to(currentRoom).emit('newPlayer', roomData[currentRoom]);
 }
@@ -534,11 +534,13 @@ exports.handleShineRoads = function(io, socket, currentRoom, payload) {
     roads.forEach(function(road, i) { //free roads around owned roads
         if (road.getPlayerIndex() == playerIndex) {
             road.getEndpoints().forEach(function(vertexEndpoint) {
-                vertices[vertexEndpoint].getRoads().forEach(function(neighborRoad) {
-                    if (roads[neighborRoad].getPlayerIndex() == -1) {
-                        shineRoads.push(neighborRoad);
-                    }
-                });
+                if (vertices[vertexEndpoint].getPlayerIndex() == -1 || vertices[vertexEndpoint].getPlayerIndex() == playerIndex) {
+                    vertices[vertexEndpoint].getRoads().forEach(function(neighborRoad) {
+                        if (roads[neighborRoad].getPlayerIndex() == -1) {
+                            shineRoads.push(neighborRoad);
+                        }
+                    });
+                }
             });
         }
     })
@@ -716,7 +718,7 @@ function distributeCards(io, dice, currentRoom) {
     var hexagons = hexagonData[currentRoom];
     var vertices = vertexData[currentRoom];
     hexagons.forEach(function(hexagon, i) {
-        if (hexagon.getDiceNumber() == dice) {
+        if (hexagon.getDiceNumber() == dice && robberData[currentRoom] != i) { //Correct dice number and not being robbered
             hexagon.getVertices().forEach(function(vertexIndex) {
                 var vertex = vertices[vertexIndex];
                 if (vertex.getPlayerIndex() != -1) { //Add cards to player card data
@@ -737,8 +739,10 @@ function getDiceRoll(currentRoom) {
 
 exports.handleNameChangeAttempts = function(io, socket, previousName, name, uuid, currentRoom) {
     console.log('io', io, 'previousName', previousName, 'name', name, 'uuid', uuid, 'currentRoom', currentRoom, 'socket.id', socket.id);
-    playerData[uuid].name = name;
-    emitPlayersToRestOfRoom(io, currentRoom);
+    if (playerData[uuid] != null) { //It's possible that they haven't joined a game yet
+        playerData[uuid].name = name;
+        emitPlayersToRestOfRoom(io, currentRoom);
+    }
 }
 
 exports.handleMonopoly = function(io, socket, currentRoom, monopolyData) {
@@ -859,14 +863,29 @@ function beginTurn(io, socket, currentRoom, turnInfo) {
     //Roll dice
         //Potentially move robber
     //Distribute cards
-    playerTurn[currentRoom] = (1 + playerTurn[currentRoom]) % roomData[currentRoom].length;
+
+    if (inBeginGameData[currentRoom] == -1) { //Going forward
+        playerTurn[currentRoom] = (1 + playerTurn[currentRoom]) % roomData[currentRoom].length;
+        if (playerTurn[currentRoom] == roomData[currentRoom].length - 1) { //If it's the end person then reverse the increment scheme
+            inBeginGameData[currentRoom] += 1;
+        }
+
+    } else if (inBeginGameData[currentRoom] == 0) { //Stays there for snake
+        // playerTurn[currentRoom] = (1 + playerTurn[currentRoom]) % roomData[currentRoom].length; //Don't change playerTurn
+        inBeginGameData[currentRoom] += 1;
+    } else if (inBeginGameData[currentRoom] == 1) { //Goes backwards
+        if (playerTurn[currentRoom] > 0) {
+            playerTurn[currentRoom] = (playerTurn[currentRoom] - 1) % roomData[currentRoom].length;
+        } else {
+            inBeginGameData[currentRoom] += 1;
+        }
+    }
+
     io.sockets.in(currentRoom).emit("whoseTurn", playerTurn[currentRoom]);
     var player = getPlayer(currentRoom, playerTurn[currentRoom]);
-    console.log('begin turn playerIndex', playerTurn[currentRoom], roomData[currentRoom].length);
 
-    if (playerTurn[currentRoom] == 0) {
-        inBeginGameData[currentRoom] += 1
-    }
+    console.log('begin turn inBeginGameData[currentRoom]', inBeginGameData[currentRoom], 'playerTurn', playerTurn[currentRoom])
+
     if (inBeginGameData[currentRoom] < 2) {
         //type 0 for beginning game option
         console.log('In Begin-Game phase', inBeginGameData[currentRoom]);

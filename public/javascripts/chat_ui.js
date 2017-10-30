@@ -22,6 +22,10 @@ function processUserInput(chatApp, socket) {
 		// $('#messages').scrollTop($('#messages').prop('scrollHeight'));
 	}
 
+	var chatBox = $('#messages');
+	var height = chatBox[0].scrollHeight;
+	chatBox.scrollTop(height);
+
 	$('#send-message').val('');
 }
 
