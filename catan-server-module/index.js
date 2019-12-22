@@ -1,3 +1,3 @@
-var server = require('./socket-server');
+var server = require('./socket-server')
 
-exports.listen = server.listen;
+exports.listen = server.listen
