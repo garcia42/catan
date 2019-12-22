@@ -24,5 +24,13 @@
   "bugs": {
     "url": "https://github.com/garcia42/catan/issues"
   },
-  "homepage": "https://github.com/garcia42/catan#readme"
+  "homepage": "https://github.com/garcia42/catan#readme",
+  "devDependencies": {
+    "eslint": "^6.8.0",
+    "eslint-config-standard": "^14.1.0",
+    "eslint-plugin-import": "^2.19.1",
+    "eslint-plugin-node": "^10.0.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.1"
+  }
 }
