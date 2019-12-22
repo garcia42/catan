@@ -1,82 +1,81 @@
 
-function divEscapedContentElement(message) {
-	return $('<div></div>').text(message);
+function divEscapedContentElement (message) {
+  return $('<div></div>').text(message)
 }
 
-function divSystemContentElement(message) {
-	return $('<div></div>').html('<i>' + message + '</i>');
+function divSystemContentElement (message) {
+  return $('<div></div>').html('<i>' + message + '</i>')
 }
 
-function processUserInput(chatApp, socket) {
-	var message = $('#send-message').val();
-	var systemMessage;
+function processUserInput (chatApp, socket) {
+  var message = $('#send-message').val()
+  var systemMessage
 
-	if (message.charAt(0) == '/') {
-		systemMessage = chatApp.processCommand(message);
-		if (systemMessage) {
-			$('#messages').scrollToTop($('#messages').prop('scrollHeight'));
-		}
-	} else {
-		chatApp.sendMessage($('#room').text(), message);
-		$('#messages').append(divEscapedContentElement("Self: " + message));
-		// $('#messages').scrollTop($('#messages').prop('scrollHeight'));
-	}
+  if (message.charAt(0) == '/') {
+    systemMessage = chatApp.processCommand(message)
+    if (systemMessage) {
+      $('#messages').scrollToTop($('#messages').prop('scrollHeight'))
+    }
+  } else {
+    chatApp.sendMessage($('#room').text(), message)
+    $('#messages').append(divEscapedContentElement('Self: ' + message))
+    // $('#messages').scrollTop($('#messages').prop('scrollHeight'));
+  }
 
-	var chatBox = $('#messages');
-	var height = chatBox[0].scrollHeight;
-	chatBox.scrollTop(height);
+  var chatBox = $('#messages')
+  var height = chatBox[0].scrollHeight
+  chatBox.scrollTop(height)
 
-	$('#send-message').val('');
+  $('#send-message').val('')
 }
 
+var socket = io.connect()
 
-var socket = io.connect();
+$(document).ready(function () {
+  var chatApp = new Chat(socket)
 
-$(document).ready(function() {
-	var chatApp = new Chat(socket);
+  socket.on('nameResult', function (result) {
+    var message
 
-	socket.on('nameResult', function(result) {
-		var message;
+    if (result.success) {
+      message = 'You are now known as ' + result.name + '.'
+    } else {
+      message = result.message
+    }
+    $('#messages').append(divSystemContentElement(message))
+  })
 
-		if (result.success) {
-			message = 'You are now known as ' + result.name + '.';
-		} else {
-			message = result.message;
-		}
-		$('#messages').append(divSystemContentElement(message));
-	});
+  socket.on('joinResult', function (result) {
+    $('#room').text(result.room)
+    $('#messages').append(divSystemContentElement('Room Changed.'))
+  })
 
-	socket.on('joinResult', function(result) {
-		$('#room').text(result["room"]);
-		$('#messages').append(divSystemContentElement('Room Changed.'));
-	});
+  socket.on('message', function (message) {
+    var newElement = $('<div></div>').text(message.text)
+    $('#messages').append(newElement)
+  })
 
-	socket.on('message', function(message) {
-		var newElement = $('<div></div>').text(message.text);
-		$('#messages').append(newElement);
-	});
+  socket.on('rooms', function (rooms) {
+    $('#room-list').empty()
 
-	socket.on('rooms', function(rooms) {
-		$('#room-list').empty();
+    for (var room in rooms) {
+      // room = room.substring(1, room.length);
+      if (room != '') {
+        $('#room-list').append(divEscapedContentElement(room))
+      }
+    }
 
-		for (var room in rooms) {
-			// room = room.substring(1, room.length);
-			if (room != '') {
-				$('#room-list').append(divEscapedContentElement(room));
-			}
-		}
+    $('#room-list div').click(function () {
+      chatApp.processCommand('/join ' + $(this).text())
+    })
+  })
 
-		$('#room-list div').click(function() {
-			chatApp.processCommand('/join ' + $(this).text());
-		});
-	});
+  setInterval(function () {
+    socket.emit('rooms')
+  }, 1000)
 
-	setInterval(function() {
-		socket.emit('rooms');
-	}, 1000);
-
-	$('#send-form').submit(function() {
-		processUserInput(chatApp, socket);
-		return false;
-	})
-});
+  $('#send-form').submit(function () {
+    processUserInput(chatApp, socket)
+    return false
+  })
+})
