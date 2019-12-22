@@ -4,7 +4,7 @@ catan
 ## Installing
 1. Clone the repo
 2. `npm install`
-3. Run the app with `node server.js`
+3. Run the app with `npm start`
 
 
 ---
