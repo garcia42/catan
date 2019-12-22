@@ -1,6 +1,14 @@
 catan
 =====
 
+## Installing
+1. Clone the repo
+2. `npm install`
+3. Run the app with `node server.js`
+
+
+---
+
 Todo list:----------
 Trading
     ports
