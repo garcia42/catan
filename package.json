@@ -5,7 +5,7 @@
   "dependencies": {
     "d3": "^4.10.2",
     "jquery": "~3.4.0",
-    "mime": "~1.2.7",
+    "mime": "~1.4.1",
     "socket.io": "~2.0.3"
   },
   "scripts": {
