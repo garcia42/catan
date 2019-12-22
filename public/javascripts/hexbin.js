@@ -1,3 +1,4 @@
+/* eslint-disable */
 (function () {
   d3.hexbin = function () {
     var width = 1

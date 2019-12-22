@@ -54,13 +54,13 @@ class Hexagon {
   }
 
   addNeighbor (neighborHexagonIndex) {
-    if (this.neighbors.indexOf(neighborHexagonIndex) == -1 && neighborHexagonIndex != this.getIndex()) {
+    if (this.neighbors.indexOf(neighborHexagonIndex) === -1 && neighborHexagonIndex !== this.getIndex()) {
       this.neighbors.push(neighborHexagonIndex)
     }
   }
 
   isRed () {
-    return this.getDiceNumber() == 6 || this.getDiceNumber() == 8
+    return this.getDiceNumber() === 6 || this.getDiceNumber() === 8
   }
 };
 
