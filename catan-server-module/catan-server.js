@@ -745,18 +745,18 @@ exports.handleNameChangeAttempts = function (io, socket, previousName, name, uui
 exports.handleMonopoly = function (io, socket, currentRoom, monopolyData) {
   var resourceName = order[monopolyData.resource]
   var uuid = monopolyData.uuid
-  console.log('monopoly', resourceName, uuid)
-  var totalCards = 0
-  roomData[currentRoom].forEach(function (player) {
-    if (playerData[uuid].getPlayerIndex() !== player.getPlayerIndex()) {
-      totalCards += player.getCards().monopolyResource(monopolyData.resource)
-    }
-  })
   if (playerData[uuid].getCards().getResourceAmount(8) > 0) { // Can't use if have 0
+    console.log('monopoly', resourceName, uuid)
+    var totalCards = 0
+    roomData[currentRoom].forEach(function (player) {
+      if (playerData[uuid].getPlayerIndex() !== player.getPlayerIndex()) {
+        totalCards += player.getCards().monopolyResource(monopolyData.resource)
+      }
+    })
     playerData[uuid].getCards().subtractResourceAmount(8, 1) // Monopoly - 8 will always happen
     playerData[uuid].getCards().addResourceAmount(monopolyData.resource, totalCards)
+    io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(i => i.getCards()))
   }
-  io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(i => i.getCards()))
 }
 
 exports.handleYearOfPlenty = function (io, socket, currentRoom, yearOfPlentyData) {
@@ -766,8 +766,8 @@ exports.handleYearOfPlenty = function (io, socket, currentRoom, yearOfPlentyData
   if (playerData[uuid].getCards().getResourceAmount(9) > 0) { // Can't use if have 0
     playerData[uuid].getCards().subtractResourceAmount(9, 1) // Year of Plenty - 9
     playerData[uuid].getCards().yearOfPlenty(yearOfPlentyData.resources)
+    io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(i => i.getCards()))
   }
-  io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(i => i.getCards()))
 }
 
 // Relies on FE to make sure they don't have any knights
