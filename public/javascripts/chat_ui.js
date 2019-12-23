@@ -4,6 +4,10 @@ function divEscapedContentElement (message) {
   return $('<div></div>').text(message)
 }
 
+function spanEscapedContentElement (message) {
+  return $('<span></span>').text(message)
+}
+
 function divSystemContentElement (message) {
   return $('<div></div>').html('<i>' + message + '</i>')
 }
@@ -56,18 +60,22 @@ $(document).ready(function () {
     $('#messages').append(newElement)
   })
 
-  socket.on('rooms', function (rooms) {
+  socket.on('rooms', function (rooms, currentRoom) {
     $('#room-list').empty()
-
     for (var room in rooms) {
-      // room = room.substring(1, room.length);
       if (room !== '') {
-        $('#room-list').append(divEscapedContentElement(room))
+        var roomDiv = $('<div></div>')
+        roomDiv.append(spanEscapedContentElement(room))
+        if (room !== currentRoom) {
+          roomDiv.append(' <span class="joinroom">(Join)</span>')
+        }
+        $('#room-list').append(roomDiv)
       }
     }
 
-    $('#room-list div').click(function () {
-      chatApp.processCommand('/join ' + $(this).text())
+    $('#room-list .joinroom').click(function () {
+      var text = $(this).parent().children(':first').text()
+      chatApp.processCommand('/join ' + text)
     })
   })
 

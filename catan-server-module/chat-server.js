@@ -17,7 +17,7 @@ exports.onConnection = function (socket, fieldio) {
   handleRoomJoining(io, socket)
 
   socket.on('rooms', function () {
-    socket.emit('rooms', io.sockets.adapter.rooms)
+    socket.emit('rooms', io.sockets.adapter.rooms, currentRoom[socket.id])
   })
 
   handleUserDisconnection(socket, nickNames, namesUsed)
