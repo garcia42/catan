@@ -56,7 +56,7 @@ exports.handleBoardCreation = function createBoard (socket, currentRoom, uuid) {
       hexagons: hexagonData[currentRoom],
       vertices: vertexData[currentRoom],
       roads: roadData[currentRoom],
-      ports: portVertexData[currentRoom],
+      ports: portData[currentRoom],
       players: roomData[currentRoom] == null ? [] : roomData[currentRoom],
       robber: robberData[currentRoom],
       gameStarted: currentTurnCountData[currentRoom] > -2,
@@ -571,9 +571,9 @@ exports.handleHousePlacement = function (io, socket, currentRoom, locationInfo) 
 
   // Check if there is a port on this vertex. Add player to it if exists.
   for (var port in portData[currentRoom]) {
-    if (port.v1 == specificVertex || port.v2 == specificVertex) {
-        port.ownerIndex = playerIndex
-        break
+    if (port.v1 === specificVertex || port.v2 === specificVertex) {
+      port.ownerIndex = playerIndex
+      break
     }
   }
   locationInfo.playerIndex = playerIndex
