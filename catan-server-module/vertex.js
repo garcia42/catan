@@ -18,40 +18,40 @@ class Vertex {
     this.playerIndex = playerIndex
   }
 
-  	getX () {
- 		return this.x
-   	};
+  getX () {
+    return this.x
+  };
 
-   	getY () {
+  getY () {
     return this.y
-   	};
+  };
 
   isEqual (vertex) {
-    	return this.x == vertex.getX() && this.y == vertex.getY()
+    return this.x === vertex.getX() && this.y === vertex.getY()
   }
 
   addHexagon (hex) {
-    	this.hexagons.push(hex)
+    this.hexagons.push(hex)
   }
 
   getHexagons () {
-    	return this.hexagons
+    return this.hexagons
   }
 
   addNeighbor (neighbor) {
-    	this.neighbors.push(neighbor)
+    this.neighbors.push(neighbor)
   }
 
   getNeighbors () {
-    	return this.neighbors
+    return this.neighbors
   }
 
   setCircle (circle) {
-    	this.circle = circle
+    this.circle = circle
   }
 
   getCircle () {
-    	return this.circle
+    return this.circle
   }
 
   addRoad (roadId) {

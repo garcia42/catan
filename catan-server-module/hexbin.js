@@ -1,3 +1,4 @@
+/* eslint-disable */
 const d3 = require('d3');
 
 (function () {
