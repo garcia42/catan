@@ -1,4 +1,5 @@
-function createTradeWindow(svgContainer, containerWidth, containerHeight, hexagonColors, cardData) {
+// Linter thinks that this method is never called. Not sure how to fix that.
+function createTradeWindow (svgContainer, containerWidth, containerHeight, hexagonColors, cardData) {
   svgContainer.selectAll('.tradeWindow').data([0]).enter()
     .append('rect')
     .attr('class', 'tradeWindow')
@@ -39,21 +40,20 @@ function createTradeWindow(svgContainer, containerWidth, containerHeight, hexago
       svgContainer.selectAll('.tradeWindow').remove()
       svgContainer.selectAll('.tradeText').remove()
       svgContainer.selectAll('.exitTrade').remove()
-      svgContainer.selectAll(".Receive").remove()
-      svgContainer.selectAll(".Give").remove()
-      svgContainer.selectAll(".Current").remove()
-      svgContainer.selectAll(".tradeResourceTextReceive").remove()
-      svgContainer.selectAll(".tradeResourceTextGive").remove()
-      svgContainer.selectAll(".tradeResourceTextCurrent").remove()
+      svgContainer.selectAll('.Receive').remove()
+      svgContainer.selectAll('.Give').remove()
+      svgContainer.selectAll('.Current').remove()
+      svgContainer.selectAll('.tradeResourceTextReceive').remove()
+      svgContainer.selectAll('.tradeResourceTextGive').remove()
+      svgContainer.selectAll('.tradeResourceTextCurrent').remove()
     })
 
-    createTradeBoxes(svgContainer, hexagonColors, "Receive", .25, null)
-    createTradeBoxes(svgContainer, hexagonColors, "Current", .5, null)
-    createTradeBoxes(svgContainer, hexagonColors, "Give", .75, null)
+  createTradeBoxes(svgContainer, hexagonColors, 'Receive', 0.25, null)
+  createTradeBoxes(svgContainer, hexagonColors, 'Current', 0.5, null)
+  createTradeBoxes(svgContainer, hexagonColors, 'Give', 0.75, null)
 }
 
-function createTradeBoxes(svgContainer, hexagonColors, tradeActionString, yPositionModifier, cardData) {
-
+function createTradeBoxes (svgContainer, hexagonColors, tradeActionString, yPositionModifier, cardData) {
   var tW = svgContainer.selectAll('.tradeWindow')[0][0]
   var tradeWindowX = parseInt(tW.attributes.x.value)
   var tradeWindowY = parseInt(tW.attributes.y.value)
@@ -85,12 +85,11 @@ function createTradeBoxes(svgContainer, hexagonColors, tradeActionString, yPosit
     .data(boxes)
     .enter().append('text')
     .attr('class', 'tradeResourceText' + tradeActionString)
-    // .attr('id', function(d, i) {
-    //   return tradeActionString + resources[i]
-    // })
+    .attr('id', function (d, i) {
+      return tradeActionString + resources[i]
+    })
     .text(function (d, i) {
-      return 0
-      // return cardData == null ? 0 : cardData.cardData[resourceEntries[i]]
+      return cardData == null ? 0 : cardData.cardData[resources[i]]
     })
     .attr('font-size', '30px')
     .attr('fill', 'black')
