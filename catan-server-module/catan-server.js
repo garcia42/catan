@@ -29,7 +29,6 @@ var playerData = {} // uuid to playerData
 
 var scale = 1
 var radius = 50
-var indicesLeft = [0, 1, 2, 3]
 
 exports.handleBoardCreation = function createBoard (socket, currentRoom, uuid) {
   var radiusScaled = radius * scale
@@ -54,9 +53,9 @@ exports.handleBoardCreation = function createBoard (socket, currentRoom, uuid) {
   socket.emit('newBoard',
     {
       playerIndex: playerData[uuid] == null ? -1 : playerData[uuid].getPlayerIndex(),
-		 	hexagons: hexagonData[currentRoom],
-		  	vertices: vertexData[currentRoom],
-		  	roads: roadData[currentRoom],
+      hexagons: hexagonData[currentRoom],
+      vertices: vertexData[currentRoom],
+      roads: roadData[currentRoom],
       ports: portVertexData[currentRoom],
       players: roomData[currentRoom] == null ? [] : roomData[currentRoom],
       robber: robberData[currentRoom],
@@ -71,7 +70,7 @@ function arrangeNumbersOnHexagons (hexagons) {
   var redsRemaining = 0
   while (true) {
     hexagons.forEach(function (hexagon) { // Check each hexagon
-      if (hexagon.getDiceNumber() == 6 || hexagon.getDiceNumber() == 8) {
+      if (hexagon.getDiceNumber() === 6 || hexagon.getDiceNumber() === 8) {
         for (var i in hexagon.getNeighbors()) {
           if (hexagons[hexagon.getNeighbors()[i]].isRed()) { // Found adjacent red, move it to random other location
             var noRedIndex = findNoRedSpace(hexagons)
@@ -94,7 +93,7 @@ function arrangeNumbersOnHexagons (hexagons) {
 function findNoRedSpace (hexagons) {
   while (true) { // Find other hexagon index that has no reds
     var random = Math.floor(Math.random() * hexagons.length)
-    while (hexagons[random].getDiceNumber() == '') {
+    while (hexagons[random].getDiceNumber() === '') {
       random = Math.floor(Math.random() * hexagons.length)
     }
     var hexNeighbors = hexagons[random].getNeighbors()
@@ -128,21 +127,21 @@ function createPortVertices (vertices) {
   var portVertices = []
   var ports = []
   vertices.forEach(function (vertex) {
-    if (vertex.getNeighbors().length == 2) {
+    if (vertex.getNeighbors().length === 2) {
       twoNeighbors.push(vertex)
     }
   })
 
   while (portVertices.length < 18) {
     for (var i = 0; i < twoNeighbors.length; i++) {
-      if (inelligibleIds.indexOf(twoNeighbors[i].getId()) == -1) {
+      if (inelligibleIds.indexOf(twoNeighbors[i].getId()) === -1) {
         var chosenVertexId = twoNeighbors[i].getId()
 
         portVertices.push(chosenVertexId)
         inelligibleIds.push(chosenVertexId)
 
         var chosenNeighborId
-        if (inelligibleIds.indexOf(vertices[chosenVertexId].getNeighbors()[0]) == -1) {
+        if (inelligibleIds.indexOf(vertices[chosenVertexId].getNeighbors()[0]) === -1) {
           chosenNeighborId = vertices[chosenVertexId].getNeighbors()[0]
         } else {
           chosenNeighborId = vertices[chosenVertexId].getNeighbors()[1]
@@ -171,7 +170,7 @@ function createDevelopmentCards () {
 // Method will include playerIndex, created by chat server because it has more to do with joining and exiting chat rooms
 exports.handlePlayerJoin = function handlePlayerJoin (io, socket, currentRoom, nickName, uuid) {
   console.log('Player trying to join', uuid)
-  if (playerData[uuid] == null && currentTurnCountData[currentRoom] == -2) {
+  if (playerData[uuid] == null && currentTurnCountData[currentRoom] === -2) {
     console.log('Player has Joined', uuid)
     createPlayerDataObject(currentRoom, nickName, uuid)
     socket.emit('joinedGame', playerData[uuid].getPlayerIndex())
@@ -213,17 +212,17 @@ function createHexagonObjects (radius, currentRoom) {
       var x = xp + radius * j * 1.75 + (radius * count)
       var y = yp + radius * i * 1.5
       hexagons.push(new Hexagon(hexagons.length,
-            	getRandomColorNumber(colorCounts, hexagons.length, robberIndex),
-            	getNextNumber(numberCount, hexagons.length, robberIndex),
-            	[x, y]))
+        getRandomColorNumber(colorCounts, hexagons.length, robberIndex),
+        getNextNumber(numberCount, hexagons.length, robberIndex),
+        [x, y]))
 
       if (i > Math.floor(size / 2)) {
         var yMirror = yp + (radius * 1.5) * (Math.floor(size / 2) - count)
-            	hexagons.push(new Hexagon(hexagons.length,
-            		getRandomColorNumber(colorCounts, hexagons.length, robberIndex),
-            		getNextNumber(numberCount, hexagons.length, robberIndex),
-            		[x, yMirror]))
-        	}
+        hexagons.push(new Hexagon(hexagons.length,
+          getRandomColorNumber(colorCounts, hexagons.length, robberIndex),
+          getNextNumber(numberCount, hexagons.length, robberIndex),
+          [x, yMirror]))
+      }
     }// for j
     count += 1
   }// for i
@@ -239,14 +238,14 @@ function createVertexObjects (hexagons, radius) {
 
   var points = []
   hexagons.forEach(function (hexagon, i) {
-    	points.push(hexagon.getCenter())
+    points.push(hexagon.getCenter())
   })
 
   // x and y in this represent the actual centers of this hexagon
   var hexPoints = hexbin(points)
   var corners = hexagon(radius)
   hexPoints.forEach(function (hexCenter, i) {
-    	hexagons[i].setCenter([hexCenter.x, hexCenter.y])
+    hexagons[i].setCenter([hexCenter.x, hexCenter.y])
     for (var j = 1; j < corners.length; j++) {
       var x = parseFloat(hexCenter.x + corners[j][0])
       var y = parseFloat(hexCenter.y + corners[j][1])
@@ -279,15 +278,17 @@ function addVertex (vertices, hexagons, xp, yp, radius, curHexagon) {
 function hexagon (radius) {
   var x0 = 0; var y0 = 0
   return d3_hexbinAngles.map(function (angle) {
-	  var x1 = Math.sin(angle) * radius
-	      var y1 = -Math.cos(angle) * radius
-	      var dx = x1 - x0
-	      var dy = y1 - y0
-	  x0 = x1, y0 = y1
-	  return [dx, dy]
+    var x1 = Math.sin(angle) * radius
+    var y1 = -Math.cos(angle) * radius
+    var dx = x1 - x0
+    var dy = y1 - y0
+    x0 = x1
+    y0 = y1
+    return [dx, dy]
   })
 }
 
+// eslint-disable-next-line camelcase
 var d3_hexbinAngles = d3.range(0, 2 * Math.PI + Math.PI / 3, Math.PI / 3)
 
 function createRoadObjects (vertices) {
@@ -295,7 +296,7 @@ function createRoadObjects (vertices) {
   for (var i = 0; i < vertices.length; i++) {
     var x = vertices[i].getX()
     var y = vertices[i].getY()
-    for (j = 0; j < vertices[i].getNeighbors().length; j++) {
+    for (var j = 0; j < vertices[i].getNeighbors().length; j++) {
       var x2 = vertices[vertices[i].getNeighbors()[j]].getX()
       var y2 = vertices[vertices[i].getNeighbors()[j]].getY()
       var road = new Road(x, y, x2, y2)
@@ -337,23 +338,23 @@ function addVertexNeighbors (vertices, radius) {
 
 function createNumberPool () {
   var numberCount = []
-  for (i = 2; i <= 12; i++) {
-	    if (i == 7) {
-	        continue
-	    }
-	    if (i == 2 || i == 12) {
-	        numberCount.push(i)
-	    } else {
-	        numberCount.push(i)
-	        numberCount.push(i)
-	    }
+  for (var i = 2; i <= 12; i++) {
+    if (i === 7) {
+      continue
+    }
+    if (i === 2 || i === 12) {
+      numberCount.push(i)
+    } else {
+      numberCount.push(i)
+      numberCount.push(i)
+    }
   }
   return numberCount
 }
 
 // Getting the next number for a hexagon
 function getNextNumber (numberCount, hexagonIndex, robberIndex) {
-  if (hexagonIndex == robberIndex) {
+  if (hexagonIndex === robberIndex) {
     return '' // Desert tile has no number, robber starts on desert
   }
   var random = Math.floor(Math.random() * numberCount.length)
@@ -364,7 +365,7 @@ function getNextNumber (numberCount, hexagonIndex, robberIndex) {
 
 // Do not currently have support for adjacent squares not being of same type.
 function getRandomColorNumber (colorCount, hexagonIndex, robberIndex) {
-  if (hexagonIndex == robberIndex) {
+  if (hexagonIndex === robberIndex) {
     return 5
   }
   var randomNumber = Math.floor(Math.random() * 5)
@@ -384,7 +385,7 @@ exports.handleBuyDevelopmentCard = function (io, socket, currentRoom, payload) {
   var sum = devCards.reduce(add, 0)
   var cardRandom = Math.floor(Math.random() * sum) // Choose random index in list to determine which card to get
   var index = 0
-  if (sum == 0 || !playerData[uuid].getCards().canBuyDevelopmentCard()) {
+  if (sum === 0 || !playerData[uuid].getCards().canBuyDevelopmentCard()) {
     console.log('No More Dev Cards or not enough resources to play this')
     socket.emit('noMoreDevCards', null)
     return
@@ -393,7 +394,7 @@ exports.handleBuyDevelopmentCard = function (io, socket, currentRoom, payload) {
     if (cardRandom - devCards[index] > 0) {
       cardRandom -= devCards[index]
     } else if (devCards[index] > 0) {
-      if (index == 1) {
+      if (index === 1) {
         handleVictoryPointChange(io, uuid, currentRoom, 1)
       }
       playerData[uuid].getCards().buyDevelopmentCard()
@@ -437,7 +438,7 @@ exports.handleShineCities = function (socket, currentRoom, payload) {
   var vertices = vertexData[currentRoom]
   var shineCities = []
   vertices.forEach(function (vertex) {
-    if (vertex.getHouseType() == 1 && vertex.getPlayerIndex() == playerIndex) {
+    if (vertex.getHouseType() === 1 && vertex.getPlayerIndex() === playerIndex) {
       shineCities.push(vertex.getId())
     }
   })
@@ -463,10 +464,10 @@ function shineSettlements (io, socket, currentRoom, settlementInfo) {
     return
   }
   vertices.forEach(function (vertex) { // All free open spaces for a house
-    if (vertex.getPlayerIndex() == -1) {
+    if (vertex.getPlayerIndex() === -1) {
       var add = true
       vertex.getNeighbors().forEach(function (vertexNeighborIndex) {
-        if (vertices[vertexNeighborIndex].getPlayerIndex() != -1) {
+        if (vertices[vertexNeighborIndex].getPlayerIndex() !== -1) {
           add = false
         }
       })
@@ -476,13 +477,13 @@ function shineSettlements (io, socket, currentRoom, settlementInfo) {
     }
   })
 
-  if (type == 1) { // Remove spaces that aren't next to a road
+  if (type === 1) { // Remove spaces that aren't next to a road
     var shineSettlementsInGame = []
     var roads = roadData[currentRoom]
     shineSettlements.forEach(function (vertexIndex, i) {
       var vertexRoads = vertices[vertexIndex].getRoads()
       for (var j = 0; j < vertexRoads.length; j++) {
-        if (roads[vertexRoads[j]].getPlayerIndex() == playerIndex) {
+        if (roads[vertexRoads[j]].getPlayerIndex() === playerIndex) {
           shineSettlementsInGame.push(vertexIndex)
           break
         }
@@ -501,20 +502,19 @@ exports.handleShineRoads = function (io, socket, currentRoom, payload) {
   var type = payload.type
   console.log('Shine Roads', 'uuid', uuid, 'playerIndex', playerIndex)
 
+  var shineRoads = []
   if (playerData[uuid].getRoadsUsed() >= 15 || !playerData[uuid].getCards().canBuyRoad()) { // Max number of roads
     console.log('Built the max number of roads, or not enough resources')
-    shineRoads = []
     socket.emit('shineRoads', shineRoads)
     return
   }
 
   var vertices = vertexData[currentRoom]
   var roads = roadData[currentRoom]
-  var shineRoads = []
   vertices.forEach(function (vertex, i) { // free roads around owned vertices
-    if (vertex.getPlayerIndex() == playerIndex) {
+    if (vertex.getPlayerIndex() === playerIndex) {
       vertex.getRoads().forEach(function (roadIndex) {
-        if (roads[roadIndex].getPlayerIndex() == -1) {
+        if (roads[roadIndex].getPlayerIndex() === -1) {
           shineRoads.push(roadIndex)
         }
       })
@@ -522,11 +522,11 @@ exports.handleShineRoads = function (io, socket, currentRoom, payload) {
   })
 
   roads.forEach(function (road, i) { // free roads around owned roads
-    if (road.getPlayerIndex() == playerIndex) {
+    if (road.getPlayerIndex() === playerIndex) {
       road.getEndpoints().forEach(function (vertexEndpoint) {
-        if (vertices[vertexEndpoint].getPlayerIndex() == -1 || vertices[vertexEndpoint].getPlayerIndex() == playerIndex) {
+        if (vertices[vertexEndpoint].getPlayerIndex() === -1 || vertices[vertexEndpoint].getPlayerIndex() === playerIndex) {
           vertices[vertexEndpoint].getRoads().forEach(function (neighborRoad) {
-            if (roads[neighborRoad].getPlayerIndex() == -1) {
+            if (roads[neighborRoad].getPlayerIndex() === -1) {
               shineRoads.push(neighborRoad)
             }
           })
@@ -535,7 +535,7 @@ exports.handleShineRoads = function (io, socket, currentRoom, payload) {
     }
   })
 
-  if (type == 'road building') {
+  if (type === 'road building') {
     if (playerData[uuid].getCards().getResourceAmount(7) > 0) {
       playerData[uuid].getCards().subtractResourceAmount(7, 1)
       io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(i => i.getCards()))
@@ -555,14 +555,14 @@ exports.handleHousePlacement = function (io, socket, currentRoom, locationInfo) 
 
   specificVertex.setPlayerIndex(playerIndex)
   locationInfo.type = specificVertex.upgradeHouse() // returns house type
-  if (specificVertex.getHouseType() == 2) {
+  if (specificVertex.getHouseType() === 2) {
     playerData[uuid].incrementCitiesUsed()
     playerData[uuid].getCards().buyCity()
   } else {
     playerData[uuid].incrementHousesUsed()
     if (currentTurnCountData[currentRoom] >= 2) { // In beginning of game doesn't take resources
       playerData[uuid].getCards().buySettlement()
-    } else if (currentTurnCountData[currentRoom] == 1) {
+    } else if (currentTurnCountData[currentRoom] === 1) {
       specificVertex.getHexagons().forEach(function (hexagonIndex) {
         playerData[uuid].getCards().addResourceAmount(hexagonData[currentRoom][hexagonIndex].getResource(), 1)
       })
@@ -626,7 +626,7 @@ function dfsOnVertex (vertices, roads, vertexId, playerIndex) {
     var connectedVertices = getVerticesConnectedByColor(playerIndex, roads, vertices[curVertex])
 
     connectedVertices.forEach(function (neighborIndex) {
-      if (curPath.indexOf(neighborIndex) == -1) {
+      if (curPath.indexOf(neighborIndex) === -1) {
         var newPath = curPath.slice()
         newPath.push(neighborIndex)
         queue.unshift([neighborIndex, newPath]) // put at front
@@ -652,7 +652,7 @@ function getAllVerticesOfPlayer (vertices, roads, playerIndex) {
 function getVerticesConnectedByColor (playerIndex, roadsDict, vertex) {
   var vertices = []
   vertex.getRoads().forEach(function (roadIndex) {
-    if (roadsDict[roadIndex].getPlayerIndex() == playerIndex) {
+    if (roadsDict[roadIndex].getPlayerIndex() === playerIndex) {
       var indexOfSelf = roadsDict[roadIndex].getEndpoints().indexOf(vertex.getId())
       vertices.push(roadsDict[roadIndex].getEndpoints()[1 - indexOfSelf]) // This is an xor :D
     }
@@ -668,7 +668,7 @@ function handleMainTurnPhase (io, currentRoom) {
   console.log('Handle Begin Turn')
   var dice = getDiceRoll(currentRoom)
   io.sockets.in(currentRoom).emit('dice', dice)
-  if (dice[0] + dice[1] == 7) {
+  if (dice[0] + dice[1] === 7) {
     console.log('ROBBER!!!')
     robberEvent(io, currentRoom)
   } else {
@@ -690,7 +690,7 @@ exports.resumeGameFromRobberEvent = function (io, currentRoom, robbedData) {
     playerData[uuid].getCards().robbered(cards)
   }
   resumeGameData[currentRoom].push(playerData[uuid].getPlayerIndex())
-  if (resumeGameData[currentRoom].length == roomData[currentRoom].length) { // Resume Game
+  if (resumeGameData[currentRoom].length === roomData[currentRoom].length) { // Resume Game
     console.log('enough players have finished being robbered to resume game')
     resumeGameData[currentRoom] = []
     io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(p => p.getCards())) // The knight then moves here in the UI
@@ -708,10 +708,10 @@ function distributeCards (io, dice, currentRoom) {
   var hexagons = hexagonData[currentRoom]
   var vertices = vertexData[currentRoom]
   hexagons.forEach(function (hexagon, i) {
-    if (hexagon.getDiceNumber() == dice && robberData[currentRoom] != i) { // Correct dice number and not being robbered
+    if (hexagon.getDiceNumber() === dice && robberData[currentRoom] !== i) { // Correct dice number and not being robbered
       hexagon.getVertices().forEach(function (vertexIndex) {
         var vertex = vertices[vertexIndex]
-        if (vertex.getPlayerIndex() != -1) { // Add cards to player card data
+        if (vertex.getPlayerIndex() !== -1) { // Add cards to player card data
           getPlayer(currentRoom, vertex.getPlayerIndex()).getCards().addResourceAmount(hexagon.getResource(), vertex.getHouseType())
         }
       })
@@ -741,7 +741,7 @@ exports.handleMonopoly = function (io, socket, currentRoom, monopolyData) {
   console.log('monopoly', resourceName, uuid)
   var totalCards = 0
   roomData[currentRoom].forEach(function (player) {
-    if (playerData[uuid].getPlayerIndex() != player.getPlayerIndex()) {
+    if (playerData[uuid].getPlayerIndex() !== player.getPlayerIndex()) {
       totalCards += player.getCards().monopolyResource(monopolyData.resource)
     }
   })
@@ -773,11 +773,11 @@ exports.handleRobberPlacement = function (io, socket, currentRoom, robberInfo) {
 
   var adjVertices = hexagonData[currentRoom][robberInfo.hexIndex].getVertices()
   var occupiedVertices = adjVertices.filter(function (vertex) {
-    return vertexData[currentRoom][vertex].getPlayerIndex() != -1
+    return vertexData[currentRoom][vertex].getPlayerIndex() !== -1
   })
   playerData[uuid].getCards().subtractResourceAmount(5, 1)// knight is 5, will be shown on FE when anyone is robbed
   if (playerData[uuid].incrementKnightsUsed(roomData[currentRoom].map(p => p.knightsUsed))) { // True if user has largestArmy
-    if (largestArmy[currentRoom] != playerData[uuid].getPlayerIndex()) {
+    if (largestArmy[currentRoom] !== playerData[uuid].getPlayerIndex()) {
       console.log('new largestArmy owner')
       handleVictoryPointChange(io, uuid, currentRoom, 2)
       var oldPlayer = getPlayer(currentRoom, largestArmy[currentRoom])
@@ -837,7 +837,7 @@ exports.beginCatanGame = function (io, socket, currentRoom, nickNames) {
   // Set turn to -1
   // Shine cities for an individual player
   // After that player sets their setletlement, do the next until have two settlements
-  if (currentTurnCountData[currentRoom] == -2) {
+  if (currentTurnCountData[currentRoom] === -2) {
     io.sockets.in(currentRoom).emit('beginGame', null)
     currentTurnCountData[currentRoom] = -1
     beginTurn(io, socket, currentRoom, null)
@@ -854,15 +854,15 @@ function beginTurn (io, socket, currentRoom, turnInfo) {
   // Potentially move robber
   // Distribute cards
 
-  if (currentTurnCountData[currentRoom] == -1) { // Going forward
+  if (currentTurnCountData[currentRoom] === -1) { // Going forward
     playerTurn[currentRoom] = (1 + playerTurn[currentRoom]) % roomData[currentRoom].length
-    if (playerTurn[currentRoom] == roomData[currentRoom].length - 1) { // If it's the end person then reverse the increment scheme
+    if (playerTurn[currentRoom] === roomData[currentRoom].length - 1) { // If it's the end person then reverse the increment scheme
       currentTurnCountData[currentRoom] += 1
     }
-  } else if (currentTurnCountData[currentRoom] == 0) { // Stays there for snake
+  } else if (currentTurnCountData[currentRoom] === 0) { // Stays there for snake
     // playerTurn[currentRoom] = (1 + playerTurn[currentRoom]) % roomData[currentRoom].length; //Don't change playerTurn
     currentTurnCountData[currentRoom] += 1
-  } else if (currentTurnCountData[currentRoom] == 1) { // Goes backwards
+  } else if (currentTurnCountData[currentRoom] === 1) { // Goes backwards
     if (playerTurn[currentRoom] > 0) {
       playerTurn[currentRoom] = (playerTurn[currentRoom] - 1) % roomData[currentRoom].length
     } else {
