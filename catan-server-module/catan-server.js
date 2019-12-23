@@ -18,7 +18,7 @@ var robberData = {}
 var playerTurn = {}
 var developmentCardData = {} // Number of dev cards still left in a game
 var roomData = {} // currentRoom -> list of players in room
-var portVertexData = {}
+var portData = {}
 var resumeGameData = {}
 var currentRollData = {}
 
@@ -40,7 +40,7 @@ exports.handleBoardCreation = function createBoard (socket, currentRoom, uuid) {
     arrangeNumbersOnHexagons(hexagonData[currentRoom])
     roadData[currentRoom] = createRoadObjects(vertexData[currentRoom])
     developmentCardData[currentRoom] = createDevelopmentCards()
-    portVertexData[currentRoom] = createPortVertices(vertexData[currentRoom])
+    portData[currentRoom] = createPortVertices(vertexData[currentRoom])
     largestArmy[currentRoom] = -1
     longestRoadData[currentRoom] = -1
     resumeGameData[currentRoom] = []
@@ -56,7 +56,7 @@ exports.handleBoardCreation = function createBoard (socket, currentRoom, uuid) {
       hexagons: hexagonData[currentRoom],
       vertices: vertexData[currentRoom],
       roads: roadData[currentRoom],
-      ports: portVertexData[currentRoom],
+      ports: portData[currentRoom],
       players: roomData[currentRoom] == null ? [] : roomData[currentRoom],
       robber: robberData[currentRoom],
       gameStarted: currentTurnCountData[currentRoom] > -2,
@@ -569,6 +569,13 @@ exports.handleHousePlacement = function (io, socket, currentRoom, locationInfo) 
     }
   }
 
+  // Check if there is a port on this vertex. Add player to it if exists.
+  for (var port in portData[currentRoom]) {
+    if (port.v1 === specificVertex || port.v2 === specificVertex) {
+      port.ownerIndex = playerIndex
+      break
+    }
+  }
   locationInfo.playerIndex = playerIndex
 
   handleVictoryPointChange(io, uuid, currentRoom, 1)
@@ -823,7 +830,7 @@ exports.handleUserLeaveRoom = function (io, uuid) {
     vertexData[oldRoom] = null
     roadData[oldRoom] = null
     developmentCardData[oldRoom] = null
-    portVertexData[oldRoom] = null
+    portData[oldRoom] = null
     largestArmy[oldRoom] = null
     longestRoadData[oldRoom] = null
     resumeGameData[oldRoom] = null
