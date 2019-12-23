@@ -875,6 +875,8 @@ function beginTurn (io, socket, currentRoom, turnInfo) {
     } else {
       currentTurnCountData[currentRoom] += 1
     }
+  } else {
+    playerTurn[currentRoom] = (playerTurn[currentRoom] + 1) % roomData[currentRoom].length
   }
 
   io.sockets.in(currentRoom).emit('whoseTurn', playerTurn[currentRoom])
