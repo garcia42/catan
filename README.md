@@ -6,6 +6,9 @@ catan
 2. `npm install`
 3. Run the app with `npm start`
 
+## Linting
+* `npm run lint` will lint
+* `npm run lintfix` will auto fix most issues
 
 ---
 

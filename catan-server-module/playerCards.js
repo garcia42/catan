@@ -54,20 +54,20 @@ class PlayerCards {
   }
 
   rob () {
-    if (this.getTotalCards() == 0) {
+    if (this.getTotalCards() === 0) {
       return -1
     }
     var random = Math.floor(Math.random() * this.getTotalCards())
     var index = 0
-	    while (random >= 0 && index < 5) {
-	        if (random - this.getResourceAmount(index) > 0) {
-	            random -= this.getResourceAmount(index)
+    while (random >= 0 && index < 5) {
+      if (random - this.getResourceAmount(index) > 0) {
+        random -= this.getResourceAmount(index)
       } else if (this.getResourceAmount(index) > 0) {
         this.subtractResourceAmount(index, 1)
         return index
       }
-	        index++
-	    }
+      index++
+    }
   }
 
   robbered (cards) {
@@ -77,16 +77,16 @@ class PlayerCards {
   }
 
   canBuyDevelopmentCard () {
-	 	if (this.getResourceAmount(2) > 0 && this.getResourceAmount(3) > 0 && this.getResourceAmount(4) > 0) {
-	 		return true
-	 	}
-	 	return false
+    if (this.getResourceAmount(2) > 0 && this.getResourceAmount(3) > 0 && this.getResourceAmount(4) > 0) {
+      return true
+    }
+    return false
   }
 
   buyDevelopmentCard () {
     this.subtractResourceAmount(2, 1)
-	 	this.subtractResourceAmount(3, 1)
-	 	this.subtractResourceAmount(4, 1)
+    this.subtractResourceAmount(3, 1)
+    this.subtractResourceAmount(4, 1)
   }
 
   canBuyRoad () {
@@ -103,16 +103,16 @@ class PlayerCards {
 
   canBuySettlement () {
     if (this.getResourceAmount(0) > 0 && this.getResourceAmount(1) > 0 && this.getResourceAmount(2) > 0 && this.getResourceAmount(3) > 0) {
-	 		return true
+      return true
     }
     return false
   }
 
   buySettlement () {
     this.subtractResourceAmount(0, 1)
-	 	this.subtractResourceAmount(1, 1)
-	 	this.subtractResourceAmount(2, 1)
-	 	this.subtractResourceAmount(3, 1)
+    this.subtractResourceAmount(1, 1)
+    this.subtractResourceAmount(2, 1)
+    this.subtractResourceAmount(3, 1)
   }
 
   canBuyCity () {
@@ -124,7 +124,7 @@ class PlayerCards {
 
   buyCity () {
     this.subtractResourceAmount(3, 2)
-	 	this.subtractResourceAmount(4, 3)
+    this.subtractResourceAmount(4, 3)
   }
 
   hasKnight () {

@@ -1,3 +1,6 @@
+/* eslint-disable no-unused-vars */
+/* global d3_hexbinAngles d3 socket $ */
+
 var scale = 1
 var containerWidth = 900 * scale
 var containerHeight = 600 * scale
@@ -40,6 +43,7 @@ var playerTurn = -1
     8: trading
 } */
 var currentAction = -1
+// eslint-disable-next-line no-unused-vars
 var resourcesPicked = [] // Used for year of plenty
 var resourcesToSteal = 0
 var roadBuildingCount = 0
@@ -62,11 +66,11 @@ $(document).ready(function () {
     createNumberCircleUi(serverData.hexagons)
     createRobberUi(serverData.hexagons, serverData.robber)
     createNumbersUi(serverData.hexagons)
-    createPlayerResourcesUi(serverData.players.map(p => p.cards).filter(cD => cD.playerIndex == playerIndex)[0])
+    createPlayerResourcesUi(serverData.players.map(p => p.cards).filter(cD => cD.playerIndex === playerIndex)[0])
     createPlayerBoxesUi(serverData.players)
     createActionsUi()
     createPortsUi(serverData.ports)
-    createDevCardUi(serverData.players.map(p => p.cards).filter(cD => cD.playerIndex == playerIndex)[0])
+    createDevCardUi(serverData.players.map(p => p.cards).filter(cD => cD.playerIndex === playerIndex)[0])
     createBeginGameUi(socket, serverData.inGame, serverData.gameStarted)
     updateDiceUi(serverData.dice)
 
@@ -129,9 +133,9 @@ function restoreCurrentAction (gameStarted, inGame) {
     setCurrentAction(-1, null)
   }
 
-  if (gameStarted && inGame && (playerTurn == playerIndex || parseInt(localStorage.currentAction) == 4)) {
+  if (gameStarted && inGame && (playerTurn === playerIndex || parseInt(localStorage.currentAction) === 4)) {
     window.currentAction = parseInt(localStorage.currentAction)
-    var data = localStorage.currentActionData != 'undefined' ? JSON.parse(localStorage.currentActionData) : null
+    var data = localStorage.currentActionData !== 'undefined' ? JSON.parse(localStorage.currentActionData) : null
     console.log(data)
     switch (currentAction) {
       case 0: // 0: knight
@@ -212,12 +216,12 @@ function createBeginGameUi (socket, inGame, gameStarted) {
       console.log('Join Catan Game')
       var text = window.svgContainer.selectAll('.beginGameText')[0][0].innerHTML
 
-      if (text == 'Spectating' || text == '') {
+      if (text === 'Spectating' || text === '') {
         return
       }
-      var messageType = text.indexOf('Join') != -1 ? 'joinCatanGame' : 'beginCatanGame'
+      var messageType = text.indexOf('Join') !== -1 ? 'joinCatanGame' : 'beginCatanGame'
       socket.emit(messageType, { uuid: localStorage.getItem('catan_uuid') })
-      if (messageType == 'joinCatanGame') {
+      if (messageType === 'joinCatanGame') {
         window.svgContainer.selectAll('.beginGameText')[0][0].innerHTML = 'Begin Game'
       }
     })
@@ -294,7 +298,7 @@ function addOnClickListenerToResources () {
       var resourceIndex = i
       resources[i].addEventListener('click', function () {
         var resourceAmount = parseInt(window.svgContainer.selectAll('.resourceText')[0][resourceIndex].innerHTML)
-        if (currentAction == 2) { // Monopoly
+        if (currentAction === 2) { // Monopoly
           socket.emit('monopoly', { resource: resourceIndex, uuid: localStorage.getItem('catan_uuid') })
           d3.selectAll('.resource').transition().duration(1000).style('stroke', 'rgb(0,0,0)')
           setCurrentAction(-1)
@@ -302,11 +306,11 @@ function addOnClickListenerToResources () {
           return
         }
 
-        if (window.currentAction == 3) { // Year of Plenty
+        if (window.currentAction === 3) { // Year of Plenty
           window.resourcesPicked.push(resourceIndex)
           console.log('year of plenty', window.resourcesPicked)
           window.svgContainer.selectAll('.resourceText')[0][resourceIndex].innerHTML = resourceAmount + 1
-          if (window.resourcesPicked.length == 2) {
+          if (window.resourcesPicked.length === 2) {
             socket.emit('yearOfPlenty', { uuid: localStorage.getItem('catan_uuid'), resources: window.resourcesPicked })
             window.resourcesPicked = []
             window.svgContainer.selectAll('.resource').transition().duration(1000).style('stroke', 'rgb(0,0,0)')
@@ -315,12 +319,12 @@ function addOnClickListenerToResources () {
           }
         }
 
-        if (currentAction == 4 && resourcesToSteal > 0 && resourceAmount > 0) {
+        if (currentAction === 4 && resourcesToSteal > 0 && resourceAmount > 0) {
           window.resourcesPicked.push(resourceIndex)
           window.svgContainer.selectAll('.resourceText')[0][resourceIndex].innerHTML = resourceAmount - 1
           window.resourcesToSteal -= 1
 
-          if (window.resourcesToSteal == 0) {
+          if (window.resourcesToSteal === 0) {
             socket.emit('resumeGame', { uuid: localStorage.getItem('catan_uuid'), cards: window.resourcesPicked })
             window.resourcesPicked = []
             window.resourcesToSteal = 0
@@ -355,7 +359,7 @@ function createDevCardUi (cardData) {
     .attr('fill', 'white')
     .attr('style', 'outline: thin solid red;')
     .on('click', function (d, i) {
-      if (this.attributes.fill.value == 'white' && currentAction < 0 && playerIndex > -1) {
+      if (this.attributes.fill.value === 'white' && currentAction < 0 && playerIndex > -1) {
         d() // d is a reference to a function
       }
       d3.event.stopPropagation()
@@ -385,7 +389,7 @@ function doNothing () {
 }
 
 function playKnight () {
-  if (svgContainer.selectAll('.devCardText')[0][0].innerHTML.indexOf(' 0') == -1 || window.currentAction == 0) {
+  if (svgContainer.selectAll('.devCardText')[0][0].innerHTML.indexOf(' 0') === -1 || window.currentAction === 0) {
     svgContainer.selectAll('.devCardAction')[0][0].attributes.fill.value = window.playerColors[window.playerIndex]
     setCurrentAction(0)
     makeEdgesBlinkRobber('#robber')
@@ -505,7 +509,7 @@ function createPlayerBoxesUi (players) {
       return 'player' + i
     })
     .attr('fill-opacity', function (d, i) {
-      return playerTurn == d.index ? 1 : 0.5
+      return playerTurn === d.index ? 1 : 0.5
     })
 
   createCardCountsUi(players.map(p => p.cards))
@@ -634,9 +638,9 @@ function createActionsUi () {
     .attr('fill', 'white')
     .attr('style', 'outline: thin solid red;')
     .on('click', function (d, i) {
-      if (this.attributes.fill.value == 'white' && currentAction < 0 && playerIndex > -1) {
+      if (this.attributes.fill.value === 'white' && currentAction < 0 && playerIndex > -1) {
         d() // d is a reference to a function
-      } else if (currentAction == i + 5) {
+      } else if (currentAction === i + 5) {
         d()
       }
       d3.event.stopPropagation()
@@ -684,16 +688,16 @@ function buyDevelopmentCard () {
 // Type will be 0 for settlements, 1 for town, 2 for robbered locations
 function shineHouseLocations (socket, shineSettlements, type) {
   var vertices = svgContainer.selectAll('.vertexCircle')[0]
-  if (shineSettlements.length != 0 && vertices[shineSettlements[0]].attributes.fill.value == 'white') { // Already white Turn off shine cities
+  if (shineSettlements.length !== 0 && vertices[shineSettlements[0]].attributes.fill.value === 'white') { // Already white Turn off shine cities
     shineSettlements.forEach(function (shineSettlementIndex) {
-      if (type == 1) { // If city, restore to player's color
+      if (type === 1) { // If city, restore to player's color
         vertices[shineSettlementIndex].attributes.fill.value = playerColors[playerIndex]
       } else {
         vertices[shineSettlementIndex].attributes.fill.value = 'transparent'
       }
     })
   } else { // Turning on shine location
-    if (type == 2) {
+    if (type === 2) {
       window.blinkingHouses = shineSettlements.slice()
       makeEdgesBlinkHouses()
       makeEdgesBlinkCities()
@@ -707,7 +711,7 @@ function shineHouseLocations (socket, shineSettlements, type) {
 
 function makeEdgesBlinkHouses () {
   d3.selectAll('.vertexCircle')
-    .filter(function (d, i) { return window.blinkingHouses.indexOf(i) != -1 })
+    .filter(function (d, i) { return window.blinkingHouses.indexOf(i) !== -1 })
     .style('stroke-width', '5px')
     .transition()
     .duration(500)
@@ -720,7 +724,7 @@ function makeEdgesBlinkHouses () {
 
 function makeEdgesBlinkCities () {
   d3.selectAll('.vertexRect')
-    .filter(function (d, i) { return window.blinkingHouses.indexOf(i) != -1 })
+    .filter(function (d, i) { return window.blinkingHouses.indexOf(i) !== -1 })
     .style('stroke-width', '5px')
     .transition()
     .duration(500)
@@ -734,9 +738,9 @@ function makeEdgesBlinkCities () {
 function handleCardDistribution (socket) {
   socket.on('cards', function (cardData) {
     createCardCountsUi(cardData)
-    createPlayerResourcesUi(cardData.filter(cD => cD.playerIndex == window.playerIndex)[0])
+    createPlayerResourcesUi(cardData.filter(cD => cD.playerIndex === window.playerIndex)[0])
     console.log('createDevCardUi', cardData)
-    createDevCardUi(cardData.filter(cD => cD.playerIndex == window.playerIndex)[0])
+    createDevCardUi(cardData.filter(cD => cD.playerIndex === window.playerIndex)[0])
   })
 }
 
@@ -811,7 +815,7 @@ function addOnClickListenerToNumberCircles () {
     (function () {
       var hexIndex = i
       circles[i].addEventListener('click', function () {
-        if (currentAction == 0) {
+        if (currentAction === 0) {
           var robby = svgContainer.select('#robber')[0][0]
           robby.setAttribute('x', this.attributes.cx.value - 25)
           robby.setAttribute('y', this.attributes.cy.value - 25)
@@ -825,24 +829,24 @@ function addOnClickListenerToNumberCircles () {
 
 function addOnClickListenerToRoads (socket) {
   var roads = svgContainer.selectAll('.road')[0]
-  for (i = 0; i < roads.length; i++) {
+  for (var i = 0; i < roads.length; i++) {
     (function () {
       var road = roads[i]
       road.addEventListener('click', function () {
-        if (this.attributes.stroke.value == 'white') {
+        if (this.attributes.stroke.value === 'white') {
           this.attributes.stroke.value = window.playerColors[playerIndex]
           var id = parseInt(this.id.substring(this.id.indexOf('d') + 1))
           socket.emit('road',
             {
               id: id,
               uuid: localStorage.getItem('catan_uuid'),
-              type: window.currentAction == 1
+              type: window.currentAction === 1
             }) // road+id
 
-          if (window.currentAction == 1) { // Road Building
+          if (window.currentAction === 1) { // Road Building
             window.roadBuildingCount += 1
             setCurrentAction(1, window.roadBuildingCount)
-            if (window.roadBuildingCount == 2) { // Second Road
+            if (window.roadBuildingCount === 2) { // Second Road
               setCurrentAction(-1, null)
               window.roadBuildingCount = 0
               window.svgContainer.selectAll('.devCardAction')[0][1].attributes.fill.value = 'white'
@@ -853,7 +857,7 @@ function addOnClickListenerToRoads (socket) {
           }
 
           roads.forEach(function (roadToReset) {
-            if (roadToReset.attributes.stroke.value == 'white') {
+            if (roadToReset.attributes.stroke.value === 'white') {
               roadToReset.attributes.stroke.value = 'transparent'
             }
           })
@@ -873,9 +877,9 @@ function addOnClickListenerToVertices () {
       circle.addEventListener('click', function () {
         console.log('event listener in circle')
         var vertexId = parseInt(circle.id.substring(circle.id.indexOf('x') + 1))
-        if (this.attributes.fill.value == 'white' || window.blinkingHouses.indexOf(vertexId) != -1) {
+        if (this.attributes.fill.value === 'white' || window.blinkingHouses.indexOf(vertexId) !== -1) {
           var locationInfo = { id: vertexId, uuid: localStorage.getItem('catan_uuid') } // vertex+id
-          if (currentAction == 9) { // Robber picking a settlement to steal from
+          if (currentAction === 9) { // Robber picking a settlement to steal from
             socket.emit('robberEvent', locationInfo)
             window.svgContainer.selectAll('.devCardAction')[0][0].attributes.fill.value = 'white'
             window.blinkingHouses = []
@@ -888,8 +892,8 @@ function addOnClickListenerToVertices () {
           }
 
           vertexCircles.forEach(function (vertexToReset) {
-            if (vertexToReset.attributes.fill.value == 'white') {
-              var colorToSetTo = window.currentAction == 6 ? window.playerColors[window.playerIndex] : 'transparent'
+            if (vertexToReset.attributes.fill.value === 'white') {
+              var colorToSetTo = window.currentAction === 6 ? window.playerColors[window.playerIndex] : 'transparent'
               vertexToReset.attributes.fill.value = colorToSetTo
             }
           })
@@ -915,7 +919,7 @@ function createNumberCircleUi (hexagons) {
     })
     .attr('r', radius / 2)
     .attr('fill', function (d, i) {
-      return hexagons[i].resourceIndex == 5 ? 'rgba(255,248,220,0)' : 'rgba(255,248,220,0.8)'
+      return hexagons[i].resourceIndex === 5 ? 'rgba(255,248,220,0)' : 'rgba(255,248,220,0.8)'
     })
 }
 
@@ -960,7 +964,7 @@ function createHexagonsUi (hexagonServerData) {
 
 function handleHousePlacement (socket) {
   socket.on('vertex', function (locationInfo) {
-    if (locationInfo.type == 2) { // City make it a new shape
+    if (locationInfo.type === 2) { // City make it a new shape
       svgContainer.select('#city' + locationInfo.id).attr('fill', playerColors[locationInfo.playerIndex])
     } else {
       svgContainer.select('#vertex' + locationInfo.id)[0][0].attributes.fill.value = playerColors[locationInfo.playerIndex]
@@ -983,7 +987,7 @@ function createVerticesUi (vertices) {
     }) // centers[i][1])
     .attr('r', radius / 3)
     .attr('fill', function (d, i) {
-      return d.houseType == 1 ? playerColors[d.playerIndex] : 'rgba(0,248,220,0)'
+      return d.houseType === 1 ? playerColors[d.playerIndex] : 'rgba(0,248,220,0)'
     })
 
   svgContainer.selectAll('.vertexRect')
@@ -1002,7 +1006,7 @@ function createVerticesUi (vertices) {
     .attr('width', radius / 1.5)
     .attr('height', radius / 1.5)
     .attr('fill', function (d, i) {
-      return vertices[i].houseType == 2 ? playerColors[vertices[i].playerIndex] : 'rgba(0,248,220,0)'
+      return vertices[i].houseType === 2 ? playerColors[vertices[i].playerIndex] : 'rgba(0,248,220,0)'
     })
     .style('pointer-events', 'none')
 }
@@ -1028,7 +1032,7 @@ function createRoadsUi (roads) {
     })
     .attr('stroke-width', radius / 12)
     .attr('stroke', function (d, i) {
-      return d.playerIndex == -1 ? 'transparent' : playerColors[d.playerIndex]
+      return d.playerIndex === -1 ? 'transparent' : playerColors[d.playerIndex]
     })
 }
 
@@ -1046,7 +1050,7 @@ function createNumbersUi (hexagonServerData) {
     .attr('font-family', 'sans-serif')
     .attr('font-size', (radius / 2.7).toString() + 'px')
     .attr('fill', function (d) {
-      return d.diceNumber == 6 || d.diceNumber == 8 ? 'red' : 'black'
+      return d.diceNumber === 6 || d.diceNumber === 8 ? 'red' : 'black'
     })
     .style('text-anchor', 'middle')
     .style('pointer-events', 'none')
@@ -1059,7 +1063,8 @@ function hexagon (radius) {
     var y1 = -Math.cos(angle) * radius
     var dx = x1 - x0
     var dy = y1 - y0
-    x0 = x1, y0 = y1
+    x0 = x1
+    y0 = y1
     return [dx, dy]
   })
 }
@@ -1068,7 +1073,7 @@ function handlePlayerJoin (socket) {
   socket.on('newPlayer', function (players) {
     console.log('new Player')
     createPlayerBoxesUi(players)
-    createDevCardUi(players.map(p => p.cards).filter(cD => cD.playerIndex == playerIndex)[0])
+    createDevCardUi(players.map(p => p.cards).filter(cD => cD.playerIndex === playerIndex)[0])
   })
 }
 
@@ -1076,7 +1081,7 @@ function handleRoadEvent (socket) {
   socket.on('road', function (roadInfo) {
     svgContainer.select('#road' + roadInfo.id)[0][0].attributes.stroke.value = playerColors[roadInfo.playerIndex]
 
-    if (currentAction == 1 && roadInfo.uuid == localStorage.catan_uuid) { // Still in RoadBuilding shine roads again
+    if (currentAction === 1 && roadInfo.uuid === localStorage.catan_uuid) { // Still in RoadBuilding shine roads again
       shineRoads()
     }
   })
@@ -1108,7 +1113,7 @@ function handleShineCities (socket) {
 
 function prepareShineCities (shineCities, isRefresh) {
   window.svgContainer.selectAll('.action')[0][1].attributes.fill.value = window.playerColors[window.playerIndex]
-  if (shineCities.length == 0 || (currentAction == 6 && !isRefresh)) { // No cities to show or already showing cities
+  if (shineCities.length === 0 || (currentAction === 6 && !isRefresh)) { // No cities to show or already showing cities
     window.svgContainer.selectAll('.action')[0][1].attributes.fill.value = 'white'
     setCurrentAction(-1, null)
   } else {
@@ -1124,12 +1129,12 @@ function handleShineSettlements (socket) {
 }
 
 function prepareShineSettlements (shineSettlementsResponse, isRefresh) {
-  if (shineSettlementsResponse.uuid == localStorage.catan_uuid) {
+  if (shineSettlementsResponse.uuid === localStorage.catan_uuid) {
     window.svgContainer.selectAll('.action')[0][2].attributes.fill.value = window.playerColors[window.playerIndex]
     console.log('prepareShineSettlements')
     var shineSettlements = shineSettlementsResponse.shineSettlements
     // If it's a refresh then don't set back to white and don't set action back to -1
-    if (shineSettlements.length == 0 || (currentAction == 7 && !isRefresh)) { // No houses to show or already in house building actionMethods
+    if (shineSettlements.length === 0 || (currentAction === 7 && !isRefresh)) { // No houses to show or already in house building actionMethods
       setCurrentAction(-1, null)
       window.svgContainer.selectAll('.action')[0][2].attributes.fill.value = 'white'
     } else {
@@ -1163,19 +1168,19 @@ function handleShineRoads (socket) {
 }
 
 function prepareShineRoads (shineRoads, isRefresh) {
-  if (shineRoads.length <= 1 || (currentAction == 5 && !isRefresh)) { // No roads to show or already showing roads
+  if (shineRoads.length <= 1 || (currentAction === 5 && !isRefresh)) { // No roads to show or already showing roads
     setCurrentAction(-1, null)
     svgContainer.selectAll('.devCardAction')[0][1].attributes.fill.value = 'white'
     window.svgContainer.selectAll('.action')[0][0].attributes.fill.value = 'white'
   } else {
-    if (currentAction != 1) {
+    if (currentAction !== 1) {
       setCurrentAction(5, shineRoads) // Build road action
       window.svgContainer.selectAll('.action')[0][0].attributes.fill.value = window.playerColors[window.playerIndex]
     }
   }
 
   var roads = svgContainer.selectAll('.road')[0]
-  if (shineRoads.length != 0 && roads[shineRoads[0]].attributes.stroke.value == 'white') {
+  if (shineRoads.length !== 0 && roads[shineRoads[0]].attributes.stroke.value === 'white') {
     shineRoads.forEach(function (shineRoadIndex) {
       roads[shineRoadIndex].attributes.stroke.value = 'transparent'
     })
@@ -1202,7 +1207,7 @@ function updateOpacityTurn (turn) {
   var allActions = svgContainer.selectAll('.action')[0].concat(svgContainer.selectAll('.devCardAction')[0])
   playerTurn = turn
   allActions.forEach(function (boxUi) {
-    if (turn == playerIndex) {
+    if (turn === playerIndex) {
       boxUi.attributes.fill.value = 'white'
     } else {
       boxUi.attributes.fill.value = 'grey'
@@ -1211,6 +1216,6 @@ function updateOpacityTurn (turn) {
 
   svgContainer.selectAll('.player').data(svgContainer.selectAll('.player')[0])
     .attr('fill-opacity', function (d, i) {
-      return turn == i ? 1 : 0.5
+      return turn === i ? 1 : 0.5
     })
 }

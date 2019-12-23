@@ -1,3 +1,4 @@
+/* global io Chat $ */
 
 function divEscapedContentElement (message) {
   return $('<div></div>').text(message)
@@ -11,7 +12,7 @@ function processUserInput (chatApp, socket) {
   var message = $('#send-message').val()
   var systemMessage
 
-  if (message.charAt(0) == '/') {
+  if (message.charAt(0) === '/') {
     systemMessage = chatApp.processCommand(message)
     if (systemMessage) {
       $('#messages').scrollToTop($('#messages').prop('scrollHeight'))
@@ -60,7 +61,7 @@ $(document).ready(function () {
 
     for (var room in rooms) {
       // room = room.substring(1, room.length);
-      if (room != '') {
+      if (room !== '') {
         $('#room-list').append(divEscapedContentElement(room))
       }
     }

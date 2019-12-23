@@ -59,7 +59,7 @@ class Road {
       var vIndex = this.getEndpoints()[i]
       var neighborRoadsDict = verticesDict[vIndex].getRoads()
       for (var key in neighborRoadsDict) {
-        if (key != this.getId()) { // Dont add neighbor Ids that match your own id
+        if (key !== this.getId()) { // Dont add neighbor Ids that match your own id
           neighbors.push(key)
         }
       }
@@ -70,7 +70,7 @@ class Road {
   getNeighborsOfSameColor (roadsD, verticesDict) {
     var sameColorNeighbors = []
     for (var neighbor in this.getNeighbors(verticesDict)) {
-      if (this.getPlayerIndex() == roadsD[this.getNeighbors(verticesDict)[neighbor]].getPlayerIndex()) {
+      if (this.getPlayerIndex() === roadsD[this.getNeighbors(verticesDict)[neighbor]].getPlayerIndex()) {
         sameColorNeighbors.push(this.getNeighbors(verticesDict)[neighbor])
       }
     }

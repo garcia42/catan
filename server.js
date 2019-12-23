@@ -7,13 +7,13 @@ var catanServerModule = require('./catan-server-module')
 var cache = {}
 
 var server = http.createServer(function (request, response) {
-  filePath = false
-  if (request.url == '/') {
+  var filePath = false
+  if (request.url === '/') {
     filePath = 'public/catan.html'
   } else {
     filePath = 'public' + request.url
   }
-  absPath = './' + filePath
+  var absPath = './' + filePath
   return serveStatic(response, cache, absPath)
 })
 
@@ -32,8 +32,8 @@ function serveStatic (response, cache, absPath) {
   if (cache[absPath]) {
     sendFile(response, absPath, cache[absPath])
   } else {
-    fs.exists(absPath, function (exists) {
-      if (exists) {
+    fs.access(absPath, function (err) {
+      if (!err) {
         fs.readFile(absPath, function (err, data) {
           if (err) {
             send404(response)

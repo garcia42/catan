@@ -103,7 +103,7 @@ function handleRegister (io, socket, nickNames, namesUsed) {
     console.log('REGISTER, ', uuid)
     var storedName = null
     for (var key in uuids) {
-      if (uuids[key] == uuid) {
+      if (uuids[key] === uuid) {
         storedName = key
       }
     }
@@ -118,7 +118,7 @@ function handleRegister (io, socket, nickNames, namesUsed) {
       // remove old socket from
       var oldSocketId = null
       for (key in nickNames) {
-        if (nickNames[key] == storedName) {
+        if (nickNames[key] === storedName) {
           oldSocketId = key
         }
       }
@@ -191,12 +191,12 @@ function joinRoom (socket, room) {
     var usersInRoomSummary = 'Users currently in ' + room + ': '
     var j = 0
     for (var userSocketId in usersInRoom) {
-      if (userSocketId != socket.id) {
+      if (userSocketId !== socket.id) {
         if (j > 0) {
           usersInRoomSummary += ', '
         }
-        var client_socket = io.sockets.connected[userSocketId]
-        usersInRoomSummary += nickNames[client_socket.id]
+        var clientSocket = io.sockets.connected[userSocketId]
+        usersInRoomSummary += nickNames[clientSocket.id]
         j += 1
       }
     }
@@ -207,10 +207,10 @@ function joinRoom (socket, room) {
 
 function handleNameChangeAttempts (io, socket, nickNames, namesUsed) {
   socket.on('nameAttempt', function (name) {
-    if (name.indexOf('Guest') == 0) {
+    if (name.indexOf('Guest') === 0) {
       socket.emit('nameResult', { success: false, message: 'Names cannot begin with "Guest".' })
     } else {
-      if (namesUsed.indexOf(name) == -1) {
+      if (namesUsed.indexOf(name) === -1) {
         var previousName = nickNames[socket.id]
         var previousNameIndex = namesUsed.indexOf(previousName)
         namesUsed.push(name)
@@ -237,7 +237,7 @@ function handleMessageBroadcast (socket, nickNames) {
 
 function handleRoomJoining (io, socket) {
   socket.on('join', function (room) {
-    if (room.newRoom == currentRoom[socket.id]) {
+    if (room.newRoom === currentRoom[socket.id]) {
       socket.emit('message', { text: 'Already in room: ' + room.newRoom })
       return
     }
@@ -254,7 +254,7 @@ function handleUserDisconnection (socket, nickNames) {
     disconnecting.push(nickNames[socket.id])
 
     setTimeout(function () {
-      if (disconnecting.indexOf(nickNames[socket.id]) != -1) {
+      if (disconnecting.indexOf(nickNames[socket.id]) !== -1) {
         // Delete nickname, nickname to uuid, names used, current room of that socket
         var uuid = uuids[nickNames[socket.id]]
         catanServer.handleUserLeaveRoom(io, uuid)
