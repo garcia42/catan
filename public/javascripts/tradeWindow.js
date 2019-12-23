@@ -39,41 +39,66 @@ function createTradeWindow(svgContainer, containerWidth, containerHeight, hexago
       svgContainer.selectAll('.tradeWindow').remove()
       svgContainer.selectAll('.tradeText').remove()
       svgContainer.selectAll('.exitTrade').remove()
+      svgContainer.selectAll(".Receive").remove()
+      svgContainer.selectAll(".Give").remove()
+      svgContainer.selectAll(".Current").remove()
+      svgContainer.selectAll(".tradeResourceTextReceive").remove()
+      svgContainer.selectAll(".tradeResourceTextGive").remove()
+      svgContainer.selectAll(".tradeResourceTextCurrent").remove()
     })
+
+    createTradeBoxes(svgContainer, hexagonColors, "Receive", .25, null)
+    createTradeBoxes(svgContainer, hexagonColors, "Current", .5, null)
+    createTradeBoxes(svgContainer, hexagonColors, "Give", .75, null)
+}
+
+function createTradeBoxes(svgContainer, hexagonColors, tradeActionString, yPositionModifier, cardData) {
+
+  var tW = svgContainer.selectAll('.tradeWindow')[0][0]
+  var tradeWindowX = parseInt(tW.attributes.x.value)
+  var tradeWindowY = parseInt(tW.attributes.y.value)
+  var tradeWindowW = parseInt(tW.attributes.width.value)
+  var tradeWindowH = parseInt(tW.attributes.height.value)
 
   var resourceColors = hexagonColors.slice()
   resourceColors.splice(5, 1)
-  svgContainer.selectAll('.resource')
+  svgContainer.selectAll('.' + tradeActionString)
     .data(resourceColors).enter()
     .append('rect')
-    .attr('class', 'resource')
+    .attr('class', tradeActionString)
     .attr('x', function (d, i) {
-      return containerWidth / 5 + i * containerWidth / 8
+      return tradeWindowX + tradeWindowW / 5 + i * tradeWindowW / 8
     })
-    .attr('y', 0.85 * containerHeight)
-    .attr('width', containerWidth / 12)
-    .attr('height', containerWidth / 12)
+    .attr('y', tradeWindowY + yPositionModifier * tradeWindowH)
+    .attr('width', tradeWindowW / 12)
+    .attr('height', tradeWindowW / 12)
     .style('stroke', 'rgb(0,0,0)')
     .attr('stroke-width', '3px')
     .attr('fill', function (d, i) {
       return d
     })
 
-  svgContainer.selectAll('.resourceText').remove()
-  svgContainer.selectAll('.resourceText')
-    .data(svgContainer.selectAll('.resource')[0])
+  var resources = ['wood', 'brick', 'sheep', 'wheat', 'ore']
+  var searchClass = '.' + tradeActionString
+  var boxes = svgContainer.selectAll(searchClass)[0]
+  svgContainer.selectAll('.tradeResourceText' + tradeActionString)
+    .data(boxes)
     .enter().append('text')
-    .attr('class', 'resourceText')
+    .attr('class', 'tradeResourceText' + tradeActionString)
+    // .attr('id', function(d, i) {
+    //   return tradeActionString + resources[i]
+    // })
     .text(function (d, i) {
-      return cardData == null ? 0 : cardData.cardData[resourceEntries[i]]
+      return 0
+      // return cardData == null ? 0 : cardData.cardData[resourceEntries[i]]
     })
-    .attr('font-size', (radius).toString() + 'px')
+    .attr('font-size', '30px')
     .attr('fill', 'black')
     .attr('x', function (d, i) {
-      return parseInt(d.attributes.x.value) + radius / 2
+      return parseInt(d.attributes.x.value) + parseInt(d.attributes.width.value) / 3
     })
     .attr('y', function (d, i) {
-      return parseInt(d.attributes.y.value) + 1.1 * radius
+      return parseInt(d.attributes.y.value) + 1.2 * parseInt(d.attributes.width.value) / 2
     })
     .style('pointer-events', 'none')
 }

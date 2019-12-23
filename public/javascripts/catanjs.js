@@ -664,7 +664,7 @@ function createActionsUi () {
 }
 
 function openTradeWindow () {
-  createTradeWindow(svgContainer, containerWidth, containerHeight, hexagonColors, cardData)
+  createTradeWindow(svgContainer, containerWidth, containerHeight, hexagonColors, null)
 }
 
 // Type will be "road building" if it's for the intial road building, null else
