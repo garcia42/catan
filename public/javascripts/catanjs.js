@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-/* global d3_hexbinAngles d3 socket $ */
+/* global d3_hexbinAngles d3 socket createTradeWindow $ */
 
 var scale = 1
 var containerWidth = 900 * scale

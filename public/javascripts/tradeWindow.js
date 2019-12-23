@@ -1,4 +1,6 @@
-// Linter thinks that this method is never called. Not sure how to fix that.
+/* eslint-disable no-unused-vars */
+/* global d3 */
+
 function createTradeWindow (svgContainer, containerWidth, containerHeight, hexagonColors, cardData) {
   svgContainer.selectAll('.tradeWindow').data([0]).enter()
     .append('rect')
