@@ -16,6 +16,10 @@ html, body {
     color: white;
 }
 
+.beginGame, .devCardAction, .action {
+	cursor: pointer;
+}
+
 a {
 	color: #00B7FF;
 }
