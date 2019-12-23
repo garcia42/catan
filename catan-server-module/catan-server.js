@@ -18,10 +18,12 @@ var robberData = {}
 var playerTurn = {}
 var developmentCardData = {} // Number of dev cards still left in a game
 var roomData = {} // currentRoom -> list of players in room
-var portVertexData = {}
+var portData = {}
 var resumeGameData = {}
-var inBeginGameData = {}
 var currentRollData = {}
+
+// This begins at -2 for the two houses placed in the beginning
+var currentTurnCountData = {}
 
 var playerData = {} // uuid to playerData
 
@@ -39,11 +41,11 @@ exports.handleBoardCreation = function createBoard (socket, currentRoom, uuid) {
     arrangeNumbersOnHexagons(hexagonData[currentRoom])
     roadData[currentRoom] = createRoadObjects(vertexData[currentRoom])
     developmentCardData[currentRoom] = createDevelopmentCards()
-    portVertexData[currentRoom] = createPortVertices(vertexData[currentRoom])
+    portData[currentRoom] = createPortVertices(vertexData[currentRoom])
     largestArmy[currentRoom] = -1
     longestRoadData[currentRoom] = -1
     resumeGameData[currentRoom] = []
-    inBeginGameData[currentRoom] = -2
+    currentTurnCountData[currentRoom] = -2
     currentRollData[currentRoom] = null
     robberData[currentRoom] = hexagonData[currentRoom].map(h => h.getResource()).indexOf(5) // 5 is the desert
   }
@@ -52,13 +54,13 @@ exports.handleBoardCreation = function createBoard (socket, currentRoom, uuid) {
   socket.emit('newBoard',
     {
       playerIndex: playerData[uuid] == null ? -1 : playerData[uuid].getPlayerIndex(),
-		 	hexagons: hexagonData[currentRoom],
-		  	vertices: vertexData[currentRoom],
-		  	roads: roadData[currentRoom],
-      ports: portVertexData[currentRoom],
+            hexagons: hexagonData[currentRoom],
+            vertices: vertexData[currentRoom],
+            roads: roadData[currentRoom],
+      ports: portData[currentRoom],
       players: roomData[currentRoom] == null ? [] : roomData[currentRoom],
       robber: robberData[currentRoom],
-      gameStarted: inBeginGameData[currentRoom] > -2,
+      gameStarted: currentTurnCountData[currentRoom] > -2,
       inGame: playerData[uuid] != null, // Not in game and game already started
       playerTurn: playerTurn[currentRoom],
       dice: currentRollData[currentRoom]
@@ -169,7 +171,7 @@ function createDevelopmentCards () {
 // Method will include playerIndex, created by chat server because it has more to do with joining and exiting chat rooms
 exports.handlePlayerJoin = function handlePlayerJoin (io, socket, currentRoom, nickName, uuid) {
   console.log('Player trying to join', uuid)
-  if (playerData[uuid] == null && inBeginGameData[currentRoom] == -2) {
+  if (playerData[uuid] == null && currentTurnCountData[currentRoom] == -2) {
     console.log('Player has Joined', uuid)
     createPlayerDataObject(currentRoom, nickName, uuid)
     socket.emit('joinedGame', playerData[uuid].getPlayerIndex())
@@ -211,17 +213,17 @@ function createHexagonObjects (radius, currentRoom) {
       var x = xp + radius * j * 1.75 + (radius * count)
       var y = yp + radius * i * 1.5
       hexagons.push(new Hexagon(hexagons.length,
-            	getRandomColorNumber(colorCounts, hexagons.length, robberIndex),
-            	getNextNumber(numberCount, hexagons.length, robberIndex),
-            	[x, y]))
+                getRandomColorNumber(colorCounts, hexagons.length, robberIndex),
+                getNextNumber(numberCount, hexagons.length, robberIndex),
+                [x, y]))
 
       if (i > Math.floor(size / 2)) {
         var yMirror = yp + (radius * 1.5) * (Math.floor(size / 2) - count)
-            	hexagons.push(new Hexagon(hexagons.length,
-            		getRandomColorNumber(colorCounts, hexagons.length, robberIndex),
-            		getNextNumber(numberCount, hexagons.length, robberIndex),
-            		[x, yMirror]))
-        	}
+                hexagons.push(new Hexagon(hexagons.length,
+                    getRandomColorNumber(colorCounts, hexagons.length, robberIndex),
+                    getNextNumber(numberCount, hexagons.length, robberIndex),
+                    [x, yMirror]))
+            }
     }// for j
     count += 1
   }// for i
@@ -237,14 +239,14 @@ function createVertexObjects (hexagons, radius) {
 
   var points = []
   hexagons.forEach(function (hexagon, i) {
-    	points.push(hexagon.getCenter())
+        points.push(hexagon.getCenter())
   })
 
   // x and y in this represent the actual centers of this hexagon
   var hexPoints = hexbin(points)
   var corners = hexagon(radius)
   hexPoints.forEach(function (hexCenter, i) {
-    	hexagons[i].setCenter([hexCenter.x, hexCenter.y])
+        hexagons[i].setCenter([hexCenter.x, hexCenter.y])
     for (var j = 1; j < corners.length; j++) {
       var x = parseFloat(hexCenter.x + corners[j][0])
       var y = parseFloat(hexCenter.y + corners[j][1])
@@ -277,12 +279,12 @@ function addVertex (vertices, hexagons, xp, yp, radius, curHexagon) {
 function hexagon (radius) {
   var x0 = 0; var y0 = 0
   return d3_hexbinAngles.map(function (angle) {
-	  var x1 = Math.sin(angle) * radius
-	      var y1 = -Math.cos(angle) * radius
-	      var dx = x1 - x0
-	      var dy = y1 - y0
-	  x0 = x1, y0 = y1
-	  return [dx, dy]
+      var x1 = Math.sin(angle) * radius
+          var y1 = -Math.cos(angle) * radius
+          var dx = x1 - x0
+          var dy = y1 - y0
+      x0 = x1, y0 = y1
+      return [dx, dy]
   })
 }
 
@@ -336,15 +338,15 @@ function addVertexNeighbors (vertices, radius) {
 function createNumberPool () {
   var numberCount = []
   for (i = 2; i <= 12; i++) {
-	    if (i == 7) {
-	        continue
-	    }
-	    if (i == 2 || i == 12) {
-	        numberCount.push(i)
-	    } else {
-	        numberCount.push(i)
-	        numberCount.push(i)
-	    }
+        if (i == 7) {
+            continue
+        }
+        if (i == 2 || i == 12) {
+            numberCount.push(i)
+        } else {
+            numberCount.push(i)
+            numberCount.push(i)
+        }
   }
   return numberCount
 }
@@ -456,7 +458,7 @@ function shineSettlements (io, socket, currentRoom, settlementInfo) {
   var response = { uuid: uuid, shineSettlements: [] }
   var vertices = vertexData[currentRoom]
   var shineSettlements = []
-  if ((playerData[uuid].getHousesUsed() >= 5 || !playerData[uuid].getCards().canBuySettlement()) && inBeginGameData[currentRoom] >= 2) { // Max number of houses
+  if ((playerData[uuid].getHousesUsed() >= 5 || !playerData[uuid].getCards().canBuySettlement()) && currentTurnCountData[currentRoom] >= 2) { // Max number of houses
     io.sockets.in(currentRoom).emit('shineSettlements', response)
     return
   }
@@ -558,21 +560,28 @@ exports.handleHousePlacement = function (io, socket, currentRoom, locationInfo) 
     playerData[uuid].getCards().buyCity()
   } else {
     playerData[uuid].incrementHousesUsed()
-    if (inBeginGameData[currentRoom] >= 2) { // In beginning of game doesn't take resources
+    if (currentTurnCountData[currentRoom] >= 2) { // In beginning of game doesn't take resources
       playerData[uuid].getCards().buySettlement()
-    } else if (inBeginGameData[currentRoom] == 1) {
+    } else if (currentTurnCountData[currentRoom] == 1) {
       specificVertex.getHexagons().forEach(function (hexagonIndex) {
         playerData[uuid].getCards().addResourceAmount(hexagonData[currentRoom][hexagonIndex].getResource(), 1)
       })
     }
   }
 
+  // Check if there is a port on this vertex. Add player to it if exists.
+  for (var port in portData[currentRoom]) {
+    if (port.v1 == specificVertex || port.v2 == specificVertex) {
+        port.ownerIndex = playerIndex
+        break
+    }
+  }
   locationInfo.playerIndex = playerIndex
 
   handleVictoryPointChange(io, uuid, currentRoom, 1)
   io.sockets.in(currentRoom).emit('vertex', locationInfo)
   io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(i => i.getCards()))
-  if (inBeginGameData[currentRoom] < 2) {
+  if (currentTurnCountData[currentRoom] < 2) {
     socket.emit('shineRoads', specificVertex.getRoads())
   }
 }
@@ -584,7 +593,7 @@ exports.handleRoadPlacement = function (io, socket, currentRoom, roadInfo) {
   var isFreeRoad = roadInfo.type
   console.log('Road Placement', 'uuid', uuid, 'playerIndex', playerIndex, 'roadId', roadId)
 
-  if (!isFreeRoad && inBeginGameData[currentRoom] >= 2) {
+  if (!isFreeRoad && currentTurnCountData[currentRoom] >= 2) {
     playerData[uuid].getCards().buyRoad()
   }
 
@@ -606,7 +615,7 @@ exports.handleRoadPlacement = function (io, socket, currentRoom, roadInfo) {
   emitPlayersToRestOfRoom(io, currentRoom)
   io.sockets.in(currentRoom).emit('road', roadInfo)
   io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(i => i.getCards()))
-  if (inBeginGameData[currentRoom] < 2) { // End turn
+  if (currentTurnCountData[currentRoom] < 2) { // End turn
     beginTurn(io, socket, currentRoom, null)
   }
 }
@@ -821,11 +830,11 @@ exports.handleUserLeaveRoom = function (io, uuid) {
     vertexData[oldRoom] = null
     roadData[oldRoom] = null
     developmentCardData[oldRoom] = null
-    portVertexData[oldRoom] = null
+    portData[oldRoom] = null
     largestArmy[oldRoom] = null
     longestRoadData[oldRoom] = null
     resumeGameData[oldRoom] = null
-    inBeginGameData[oldRoom] = null
+    currentTurnCountData[oldRoom] = null
     currentRollData[oldRoom] = null
     robberData[oldRoom] = null
   }
@@ -835,9 +844,9 @@ exports.beginCatanGame = function (io, socket, currentRoom, nickNames) {
   // Set turn to -1
   // Shine cities for an individual player
   // After that player sets their setletlement, do the next until have two settlements
-  if (inBeginGameData[currentRoom] == -2) {
+  if (currentTurnCountData[currentRoom] == -2) {
     io.sockets.in(currentRoom).emit('beginGame', null)
-    inBeginGameData[currentRoom] = -1
+    currentTurnCountData[currentRoom] = -1
     beginTurn(io, socket, currentRoom, null)
   }
 }
@@ -852,30 +861,30 @@ function beginTurn (io, socket, currentRoom, turnInfo) {
   // Potentially move robber
   // Distribute cards
 
-  if (inBeginGameData[currentRoom] == -1) { // Going forward
+  if (currentTurnCountData[currentRoom] == -1) { // Going forward
     playerTurn[currentRoom] = (1 + playerTurn[currentRoom]) % roomData[currentRoom].length
     if (playerTurn[currentRoom] == roomData[currentRoom].length - 1) { // If it's the end person then reverse the increment scheme
-      inBeginGameData[currentRoom] += 1
+      currentTurnCountData[currentRoom] += 1
     }
-  } else if (inBeginGameData[currentRoom] == 0) { // Stays there for snake
+  } else if (currentTurnCountData[currentRoom] == 0) { // Stays there for snake
     // playerTurn[currentRoom] = (1 + playerTurn[currentRoom]) % roomData[currentRoom].length; //Don't change playerTurn
-    inBeginGameData[currentRoom] += 1
-  } else if (inBeginGameData[currentRoom] == 1) { // Goes backwards
+    currentTurnCountData[currentRoom] += 1
+  } else if (currentTurnCountData[currentRoom] == 1) { // Goes backwards
     if (playerTurn[currentRoom] > 0) {
       playerTurn[currentRoom] = (playerTurn[currentRoom] - 1) % roomData[currentRoom].length
     } else {
-      inBeginGameData[currentRoom] += 1
+      currentTurnCountData[currentRoom] += 1
     }
   }
 
   io.sockets.in(currentRoom).emit('whoseTurn', playerTurn[currentRoom])
   var player = getPlayer(currentRoom, playerTurn[currentRoom])
 
-  console.log('begin turn inBeginGameData[currentRoom]', inBeginGameData[currentRoom], 'playerTurn', playerTurn[currentRoom])
+  console.log('begin turn currentTurnCountData[currentRoom]', currentTurnCountData[currentRoom], 'playerTurn', playerTurn[currentRoom])
 
-  if (inBeginGameData[currentRoom] < 2) {
+  if (currentTurnCountData[currentRoom] < 2) {
     // type 0 for beginning game option
-    console.log('In Begin-Game phase', inBeginGameData[currentRoom])
+    console.log('In Begin-Game phase', currentTurnCountData[currentRoom])
     var settlementInfo = { playerIndex: playerTurn[currentRoom], type: 0, uuid: player.getUuid() }
     shineSettlements(io, socket, currentRoom, settlementInfo)
   } else {
