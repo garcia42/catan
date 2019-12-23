@@ -68,8 +68,9 @@ a {
 	border-bottom: 1px solid #eee;
 }
 
-#room-list div:hover {
+#room-list .joinroom:hover {
 	background-color: #ddd;
+	cursor: pointer;
 }
 
 #dice {

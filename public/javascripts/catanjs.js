@@ -664,8 +664,7 @@ function createActionsUi () {
 }
 
 function openTradeWindow () {
-
-    svgContainer.selectAll('.tradeWindow').data([0]).enter()
+  svgContainer.selectAll('.tradeWindow').data([0]).enter()
     .append('rect')
     .attr('class', 'tradeWindow')
     .attr('x', containerWidth / 10)
@@ -677,25 +676,25 @@ function openTradeWindow () {
       return 'outline: thin solid red;'
     })
 
-    svgContainer.selectAll('.tradeText').data(svgContainer.selectAll('.tradeWindow')[0])
+  svgContainer.selectAll('.tradeText').data(svgContainer.selectAll('.tradeWindow')[0])
     .enter().append('text')
     .attr('class', 'tradeText')
-    .attr('x', function (d, i) {return parseInt(d.attributes.x.value) + parseInt(d.attributes.width.value) * .4})
-    .attr('y', function (d, i) {return parseInt(d.attributes.y.value) + parseInt(d.attributes.height.value) / 10 })
+    .attr('x', function (d, i) { return parseInt(d.attributes.x.value) + parseInt(d.attributes.width.value) * 0.4 })
+    .attr('y', function (d, i) { return parseInt(d.attributes.y.value) + parseInt(d.attributes.height.value) / 10 })
     .text(function () {
       return 'Trade Window'
     })
-    .attr('font-size',  '20px')
+    .attr('font-size', '20px')
     .attr('fill', 'black')
     .style('pointer-events', 'none')
 
-    svgContainer.selectAll('.exitTrade').data(svgContainer.selectAll('.tradeWindow')[0])
+  svgContainer.selectAll('.exitTrade').data(svgContainer.selectAll('.tradeWindow')[0])
     .enter().append('rect')
     .attr('class', 'exitTrade')
-    .attr('x', function (d, i) {return parseInt(d.attributes.x.value) + parseInt(d.attributes.width.value) * .05})
-    .attr('y', function (d, i) {return parseInt(d.attributes.y.value) + parseInt(d.attributes.height.value) / 20 })
-    .attr('width', function (d, i) {return parseInt(d.attributes.width.value) * .05})
-    .attr('height', function (d, i) {return parseInt(d.attributes.width.value) * .05})
+    .attr('x', function (d, i) { return parseInt(d.attributes.x.value) + parseInt(d.attributes.width.value) * 0.05 })
+    .attr('y', function (d, i) { return parseInt(d.attributes.y.value) + parseInt(d.attributes.height.value) / 20 })
+    .attr('width', function (d, i) { return parseInt(d.attributes.width.value) * 0.05 })
+    .attr('height', function (d, i) { return parseInt(d.attributes.width.value) * 0.05 })
     .attr('fill', 'red')
     .attr('style', function () {
       return 'outline: thin solid red;'
