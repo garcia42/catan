@@ -61,8 +61,8 @@ $(document).ready(function () {
     playerTurn = serverData.playerTurn
     svgContainer.selectAll('*').remove()
     createHexagonsUi(serverData.hexagons)
-    createVerticesUi(serverData.vertices)
     createRoadsUi(serverData.roads)
+    createVerticesUi(serverData.vertices)
     createNumberCircleUi(serverData.hexagons)
     createRobberUi(serverData.hexagons, serverData.robber)
     createNumbersUi(serverData.hexagons)
@@ -611,7 +611,7 @@ function createPortsUi (ports) {
       return d[1]
     })
     .style('stroke', 'rgb(0,0,0)')
-    .attr('r', radius / 4)
+    .attr('r', radius / 6)
     .attr('fill', function (d, i) {
       return window.portColors[ports[i].resource]
     })
@@ -924,14 +924,15 @@ function createNumberCircleUi (hexagons) {
 }
 
 function createRobberUi (hexagons, robberIndex) {
+  var size = radius / 1.2
   var robier = svgContainer.append('rect')
-    .attr('x', hexagons[robberIndex].center[0] - radius / 2)
-    .attr('y', hexagons[robberIndex].center[1] - radius / 2)
+    .attr('x', hexagons[robberIndex].center[0] - size / 2)
+    .attr('y', hexagons[robberIndex].center[1] - size / 2)
     .style('stroke', 'rgb(0,0,0)')
     .attr('stroke-width', '3px')
     .attr('id', 'robber')
-    .attr('width', radius)
-    .attr('height', radius)
+    .attr('width', size)
+    .attr('height', size)
     .attr('fill', 'rgba(255,0,0,1)')
 }
 
@@ -953,10 +954,9 @@ function createHexagonsUi (hexagonServerData) {
     .attr('d', function (d) {
       return 'M' + d.x + ',' + d.y + hexbin.hexagon()
     })
-    .attr('stroke', 'black')
-  // .attr("stroke", "red")
+    .attr('stroke', '#333')
     .attr('stroke-line', '20,5')
-    .attr('stroke-width', '3px')
+    .attr('stroke-width', '7px')
     .style('fill', function (d, i) {
       return hexagonColors[hexagonServerData[i].resourceIndex]
     })
@@ -985,7 +985,7 @@ function createVerticesUi (vertices) {
     .attr('cy', function (d) {
       return d.y
     }) // centers[i][1])
-    .attr('r', radius / 3)
+    .attr('r', radius / 4)
     .attr('fill', function (d, i) {
       return d.houseType === 1 ? playerColors[d.playerIndex] : 'rgba(0,248,220,0)'
     })
@@ -1030,7 +1030,7 @@ function createRoadsUi (roads) {
     .attr('y2', function (d) {
       return d.y2
     })
-    .attr('stroke-width', radius / 12)
+    .attr('stroke-width', radius / 6)
     .attr('stroke', function (d, i) {
       return d.playerIndex === -1 ? 'transparent' : playerColors[d.playerIndex]
     })

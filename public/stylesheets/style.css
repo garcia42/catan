@@ -16,6 +16,10 @@ html, body {
     color: white;
 }
 
+.beginGame, .devCardAction, .action {
+	cursor: pointer;
+}
+
 a {
 	color: #00B7FF;
 }
@@ -69,5 +73,12 @@ a {
 }
 
 #dice {
-    float: left;
+	width: 900px;
+	margin: auto;
+	padding-left: 400px;
+}
+
+#dice1, #dice2 {
+	width: 75px;
+	margin-bottom: -75px;
 }
