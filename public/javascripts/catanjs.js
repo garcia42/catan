@@ -40,7 +40,10 @@ var playerTurn = -1
     5: build road action,
     6: build city action,
     7: build settlement action,
-    8: trading
+    8: trading,
+    9: knight picking victim,
+    10: robber stealing
+
 } */
 var currentAction = -1
 // eslint-disable-next-line no-unused-vars
