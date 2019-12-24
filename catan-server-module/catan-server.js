@@ -702,6 +702,7 @@ exports.resumeGameFromRobberEvent = function (io, currentRoom, robbedData) {
     resumeGameData[currentRoom] = []
     io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(p => p.getCards())) // The knight then moves here in the UI
     io.sockets.in(currentRoom).emit('whoseTurn', playerTurn[currentRoom])
+    io.sockets.in(currentRoom).emit('stealAsRobber', playerTurn[currentRoom])
   }
 }
 
@@ -771,9 +772,9 @@ exports.handleYearOfPlenty = function (io, socket, currentRoom, yearOfPlentyData
 }
 
 // Relies on FE to make sure they don't have any knights
-exports.handleRobberPlacement = function (io, socket, currentRoom, robberInfo) {
+exports.handleRobberPlacement = function (io, socket, currentRoom, robberInfo, usingKnight) {
   var uuid = robberInfo.uuid
-  console.log('Robber Movement', robberInfo)
+  console.log('Robber Movement', robberInfo, 'using knight:', usingKnight)
   robberData[currentRoom] = robberInfo.hexIndex
   // robberInfo["playerIndex"] = playerData[socket.id];
   socket.broadcast.to(currentRoom).emit('robberPlacement', robberInfo)
@@ -782,16 +783,19 @@ exports.handleRobberPlacement = function (io, socket, currentRoom, robberInfo) {
   var occupiedVertices = adjVertices.filter(function (vertex) {
     return vertexData[currentRoom][vertex].getPlayerIndex() !== -1
   })
-  playerData[uuid].getCards().subtractResourceAmount(5, 1)// knight is 5, will be shown on FE when anyone is robbed
-  if (playerData[uuid].incrementKnightsUsed(roomData[currentRoom].map(p => p.knightsUsed))) { // True if user has largestArmy
-    if (largestArmy[currentRoom] !== playerData[uuid].getPlayerIndex()) {
-      console.log('new largestArmy owner')
-      handleVictoryPointChange(io, uuid, currentRoom, 2)
-      var oldPlayer = getPlayer(currentRoom, largestArmy[currentRoom])
-      if (oldPlayer != null) {
-        oldPlayer.victoryPoints -= 2
+
+  if (usingKnight) {
+    playerData[uuid].getCards().subtractResourceAmount(5, 1)// knight is 5, will be shown on FE when anyone is robbed
+    if (playerData[uuid].incrementKnightsUsed(roomData[currentRoom].map(p => p.knightsUsed))) { // True if user has largestArmy
+      if (largestArmy[currentRoom] !== playerData[uuid].getPlayerIndex()) {
+        console.log('new largestArmy owner')
+        handleVictoryPointChange(io, uuid, currentRoom, 2)
+        var oldPlayer = getPlayer(currentRoom, largestArmy[currentRoom])
+        if (oldPlayer != null) {
+          oldPlayer.victoryPoints -= 2
+        }
+        largestArmy[currentRoom] = playerData[uuid].getPlayerIndex()
       }
-      largestArmy[currentRoom] = playerData[uuid].getPlayerIndex()
     }
   }
   emitPlayersToRestOfRoom(io, currentRoom)
