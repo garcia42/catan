@@ -25,6 +25,7 @@ exports.onConnection = function (socket, fieldio) {
   handleHousePlacement(io, socket, currentRoom)
   handleRoadPlacement(io, socket, currentRoom)
   handleRobberPlacement(io, socket, currentRoom)
+  handleRobberPlacementWithoutKnight(io, socket, currentRoom)
   handleBeginTurn(io, socket, currentRoom)
   handleShineRoads(io, socket, currentRoom)
   handleShineSettlements(io, socket, currentRoom)
@@ -150,7 +151,13 @@ function handleBeginTurn (io, socket, currentRoom) {
 
 function handleRobberPlacement (io, socket, currentRoom) {
   socket.on('robberPlacement', function (robberInfo) {
-    catanServer.handleRobberPlacement(io, socket, currentRoom[socket.id], robberInfo)
+    catanServer.handleRobberPlacement(io, socket, currentRoom[socket.id], robberInfo, true)
+  })
+}
+
+function handleRobberPlacementWithoutKnight (io, socket, currentRoom) {
+  socket.on('robberPlacementWithoutKnight', function (robberInfo) {
+    catanServer.handleRobberPlacement(io, socket, currentRoom[socket.id], robberInfo, false)
   })
 }
 

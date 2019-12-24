@@ -40,7 +40,10 @@ var playerTurn = -1
     5: build road action,
     6: build city action,
     7: build settlement action,
-    8: trading
+    8: trading,
+    9: knight picking victim,
+    10: robber stealing
+
 } */
 var currentAction = -1
 // eslint-disable-next-line no-unused-vars
@@ -87,6 +90,7 @@ $(document).ready(function () {
   handleHousePlacement(socket)
   handleRoadEvent(socket)
   handleRobberMovement(socket)
+  handleStealAsRobber(socket)
   handleDiceRoll(socket)
   handleCardDistribution(socket)
   handleShineRoads(socket)
@@ -180,6 +184,9 @@ function restoreCurrentAction (gameStarted, inGame) {
         break
       case 9: // Knight picking victim
         prepareShineRobberSettlements(data)
+        break
+      case 10: // Robber stealing
+        stealAsRobber(data)
         break
       default:
         break
@@ -386,6 +393,11 @@ function createDevCardUi (cardData) {
 
 function doNothing () {
 
+}
+
+function stealAsRobber () {
+  setCurrentAction(10)
+  makeEdgesBlinkRobber('#robber')
 }
 
 function playKnight () {
@@ -640,8 +652,6 @@ function createActionsUi () {
     .on('click', function (d, i) {
       if (this.attributes.fill.value === 'white' && currentAction < 0 && playerIndex > -1) {
         d() // d is a reference to a function
-      } else if (currentAction === i + 5) {
-        d()
       }
       d3.event.stopPropagation()
     })
@@ -815,12 +825,13 @@ function addOnClickListenerToNumberCircles () {
     (function () {
       var hexIndex = i
       circles[i].addEventListener('click', function () {
-        if (currentAction === 0) {
+        if (currentAction === 0 || currentAction === 10) {
           var robby = svgContainer.select('#robber')[0][0]
           robby.setAttribute('x', this.attributes.cx.value - 25)
           robby.setAttribute('y', this.attributes.cy.value - 25)
 
-          socket.emit('robberPlacement', { hexIndex: hexIndex, uuid: localStorage.getItem('catan_uuid') })
+          var messageToEmit = currentAction === 0 ? 'robberPlacement' : 'robberPlacementWithoutKnight'
+          socket.emit(messageToEmit, { hexIndex: hexIndex, uuid: localStorage.getItem('catan_uuid') })
         }
       }, false)
     }())
@@ -1083,6 +1094,15 @@ function handleRoadEvent (socket) {
 
     if (currentAction === 1 && roadInfo.uuid === localStorage.catan_uuid) { // Still in RoadBuilding shine roads again
       shineRoads()
+    }
+  })
+}
+
+function handleStealAsRobber () {
+  console.log('STEAL AS ROBBER EVENT')
+  socket.on('stealAsRobber', function (turn) {
+    if (turn === playerIndex) {
+      stealAsRobber()
     }
   })
 }
