@@ -665,10 +665,10 @@ function createActionsUi () {
 }
 
 function openTradeWindow () {
-  socket.emit('openTrade', { playerIndex: playerIndex, uuid: localStorage.getItem('catan_uuid')})
+  socket.emit('openTrade', { playerIndex: playerIndex, uuid: localStorage.getItem('catan_uuid') })
 }
 
-function handleOpenTrade() {
+function handleOpenTrade () {
   socket.on('openTrade', function (cardData) {
     console.log('openTrade received')
     console.log(cardData)

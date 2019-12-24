@@ -66,12 +66,12 @@ function createTradeBoxes (svgContainer, hexagonColors, tradeActionString, yPosi
   var tradeWindowW = parseInt(tW.attributes.width.value)
   var tradeWindowH = parseInt(tW.attributes.height.value)
 
-  svgContainer.selectAll('.' + tradeActionString + "Title").data([0]).enter().append('text')
-    .attr('class', tradeActionString + "Title")
+  svgContainer.selectAll('.' + tradeActionString + 'Title').data([0]).enter().append('text')
+    .attr('class', tradeActionString + 'Title')
     .attr('font-size', '30px')
     .attr('fill', 'black')
     .attr('x', tradeWindowX + tradeWindowW / 32)
-    .attr('y', tradeWindowY + (yPositionModifier + .1) * tradeWindowH)
+    .attr('y', tradeWindowY + (yPositionModifier + 0.1) * tradeWindowH)
     .style('pointer-events', 'none')
     .text(tradeActionString)
 
@@ -125,7 +125,6 @@ function createTradeBoxes (svgContainer, hexagonColors, tradeActionString, yPosi
 }
 
 function clickTradeBox (d, i, tradeActionString, resources) {
-
   var giveID = give + resources[i]
   var currentID = current + resources[i]
   var receiveID = receive + resources[i]
@@ -138,20 +137,19 @@ function clickTradeBox (d, i, tradeActionString, resources) {
   var resourceCurrentAmount = parseInt(resCurrentHTML)
   var resourceReceiveAmount = parseInt(resReceiveHTML)
 
-  if (tradeActionString === current) {        // Remove all points from other boxes
-
+  if (tradeActionString === current) { // Remove all points from other boxes
     console.log(tradeActionString)
     resourceCurrentAmount += resourceGiveAmount
     resourceCurrentAmount -= resourceReceiveAmount
     resourceGiveAmount = 0
     resourceReceiveAmount = 0
-  } else if (tradeActionString === give) {       // If middle has more then reduce 1 and give 1 here.
+  } else if (tradeActionString === give) { // If middle has more then reduce 1 and give 1 here.
     console.log(tradeActionString)
     if (resourceCurrentAmount > 0) {
       resourceCurrentAmount -= 1
       resourceGiveAmount += 1
     }
-  } else { // Receive         // Can always request 1 more of this
+  } else { // Receive: Can always request 1 more of this
     console.log(tradeActionString)
     resourceCurrentAmount += 1
     resourceReceiveAmount += 1
