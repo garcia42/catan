@@ -36,6 +36,13 @@ exports.onConnection = function (socket, fieldio) {
   handleResumeGame(io, socket, currentRoom)
   handleJoinCatanGame(io, socket, currentRoom, nickNames)
   handleBeginCatanGame(io, socket, currentRoom, nickNames)
+  handleOpenTrade(io, socket, currentRoom, nickNames)
+}
+
+function handleOpenTrade (io, socket, currentRoom, nickNames) {
+  socket.on('openTrade', function (openTradeData) {
+    catanServer.handleOpenTrade(io, socket, currentRoom[socket.id], openTradeData.uuid)
+  })
 }
 
 function handleBeginCatanGame (io, socket, currentRoom, nickNames) {

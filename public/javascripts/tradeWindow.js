@@ -1,6 +1,10 @@
 /* eslint-disable no-unused-vars */
 /* global d3 */
 
+var give = 'Give'
+var current = 'Current'
+var receive = 'Receive'
+
 function createTradeWindow (svgContainer, containerWidth, containerHeight, hexagonColors, cardData) {
   svgContainer.selectAll('.tradeWindow').data([0]).enter()
     .append('rect')
@@ -42,17 +46,17 @@ function createTradeWindow (svgContainer, containerWidth, containerHeight, hexag
       svgContainer.selectAll('.tradeWindow').remove()
       svgContainer.selectAll('.tradeText').remove()
       svgContainer.selectAll('.exitTrade').remove()
-      svgContainer.selectAll('.Receive').remove()
-      svgContainer.selectAll('.Give').remove()
-      svgContainer.selectAll('.Current').remove()
+      svgContainer.selectAll('.' + receive).remove()
+      svgContainer.selectAll('.' + give).remove()
+      svgContainer.selectAll('.' + current).remove()
       svgContainer.selectAll('.tradeResourceTextReceive').remove()
       svgContainer.selectAll('.tradeResourceTextGive').remove()
       svgContainer.selectAll('.tradeResourceTextCurrent').remove()
     })
 
-  createTradeBoxes(svgContainer, hexagonColors, 'Receive', 0.25, null)
-  createTradeBoxes(svgContainer, hexagonColors, 'Current', 0.5, null)
-  createTradeBoxes(svgContainer, hexagonColors, 'Give', 0.75, null)
+  createTradeBoxes(svgContainer, hexagonColors, receive, 0.25, cardData)
+  createTradeBoxes(svgContainer, hexagonColors, current, 0.5, cardData)
+  createTradeBoxes(svgContainer, hexagonColors, give, 0.75, cardData)
 }
 
 function createTradeBoxes (svgContainer, hexagonColors, tradeActionString, yPositionModifier, cardData) {
@@ -61,6 +65,15 @@ function createTradeBoxes (svgContainer, hexagonColors, tradeActionString, yPosi
   var tradeWindowY = parseInt(tW.attributes.y.value)
   var tradeWindowW = parseInt(tW.attributes.width.value)
   var tradeWindowH = parseInt(tW.attributes.height.value)
+
+  svgContainer.selectAll('.' + tradeActionString + "Title").data([0]).enter().append('text')
+    .attr('class', tradeActionString + "Title")
+    .attr('font-size', '30px')
+    .attr('fill', 'black')
+    .attr('x', tradeWindowX + tradeWindowW / 32)
+    .attr('y', tradeWindowY + (yPositionModifier + .1) * tradeWindowH)
+    .style('pointer-events', 'none')
+    .text(tradeActionString)
 
   var resourceColors = hexagonColors.slice()
   resourceColors.splice(5, 1)
@@ -71,13 +84,16 @@ function createTradeBoxes (svgContainer, hexagonColors, tradeActionString, yPosi
     .attr('x', function (d, i) {
       return tradeWindowX + tradeWindowW / 5 + i * tradeWindowW / 8
     })
-    .attr('y', tradeWindowY + yPositionModifier * tradeWindowH)
+    .attr('y', tradeWindowY + (yPositionModifier) * tradeWindowH)
     .attr('width', tradeWindowW / 12)
     .attr('height', tradeWindowW / 12)
     .style('stroke', 'rgb(0,0,0)')
     .attr('stroke-width', '3px')
     .attr('fill', function (d, i) {
       return d
+    })
+    .on('click', function (d, i) {
+      clickTradeBox(d, i, tradeActionString, resources)
     })
 
   var resources = ['wood', 'brick', 'sheep', 'wheat', 'ore']
@@ -91,7 +107,11 @@ function createTradeBoxes (svgContainer, hexagonColors, tradeActionString, yPosi
       return tradeActionString + resources[i]
     })
     .text(function (d, i) {
-      return cardData == null ? 0 : cardData.cardData[resources[i]]
+      if (tradeActionString === current) {
+        return cardData == null ? 0 : cardData.cardData[resources[i]]
+      } else {
+        return 0
+      }
     })
     .attr('font-size', '30px')
     .attr('fill', 'black')
@@ -102,4 +122,45 @@ function createTradeBoxes (svgContainer, hexagonColors, tradeActionString, yPosi
       return parseInt(d.attributes.y.value) + 1.2 * parseInt(d.attributes.width.value) / 2
     })
     .style('pointer-events', 'none')
+}
+
+function clickTradeBox (d, i, tradeActionString, resources) {
+
+  var giveID = give + resources[i]
+  var currentID = current + resources[i]
+  var receiveID = receive + resources[i]
+
+  var resGiveHTML = window.svgContainer.selectAll('#' + giveID)[0][0].innerHTML
+  var resCurrentHTML = window.svgContainer.selectAll('#' + currentID)[0][0].innerHTML
+  var resReceiveHTML = window.svgContainer.selectAll('#' + receiveID)[0][0].innerHTML
+
+  var resourceGiveAmount = parseInt(resGiveHTML)
+  var resourceCurrentAmount = parseInt(resCurrentHTML)
+  var resourceReceiveAmount = parseInt(resReceiveHTML)
+
+  if (tradeActionString === current) {        // Remove all points from other boxes
+
+    console.log(tradeActionString)
+    resourceCurrentAmount += resourceGiveAmount
+    resourceCurrentAmount -= resourceReceiveAmount
+    resourceGiveAmount = 0
+    resourceReceiveAmount = 0
+  } else if (tradeActionString === give) {       // If middle has more then reduce 1 and give 1 here.
+    console.log(tradeActionString)
+    if (resourceCurrentAmount > 0) {
+      resourceCurrentAmount -= 1
+      resourceGiveAmount += 1
+    }
+  } else { // Receive         // Can always request 1 more of this
+    console.log(tradeActionString)
+    resourceCurrentAmount += 1
+    resourceReceiveAmount += 1
+  }
+
+  console.log('give:' + resourceGiveAmount)
+  console.log('receive:' + resourceReceiveAmount)
+  console.log('current:' + resourceCurrentAmount)
+  window.svgContainer.selectAll('#' + receiveID)[0][0].innerHTML = resourceReceiveAmount
+  window.svgContainer.selectAll('#' + giveID)[0][0].innerHTML = resourceGiveAmount
+  window.svgContainer.selectAll('#' + currentID)[0][0].innerHTML = resourceCurrentAmount
 }
