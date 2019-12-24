@@ -802,6 +802,15 @@ exports.handleRobberPlacement = function (io, socket, currentRoom, robberInfo, u
   socket.emit('shineRobberSettlements', occupiedVertices) // Shine to robbing player the victims
 }
 
+exports.handleOpenTrade = function (io, socket, currentRoom, uuid) {
+  if (playerData[uuid] == null) {
+    return
+  }
+
+  console.log(playerData[uuid].getCards())
+  socket.emit('openTrade', playerData[uuid].getCards())
+}
+
 exports.handleRobberEvent = function (io, socket, currentRoom, robberInfo) {
   var vertex = robberInfo.id
   var uuid = robberInfo.uuid

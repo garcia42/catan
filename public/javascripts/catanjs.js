@@ -104,6 +104,7 @@ $(document).ready(function () {
   handleGameOver(socket)
   handleJoinCatanGame(socket)
   handleBeginGame(socket)
+  handleOpenTrade(socket)
 })
 
 function handleBeginGame (socket) {
@@ -674,7 +675,15 @@ function createActionsUi () {
 }
 
 function openTradeWindow () {
-  createTradeWindow(svgContainer, containerWidth, containerHeight, hexagonColors, null)
+  socket.emit('openTrade', { playerIndex: playerIndex, uuid: localStorage.getItem('catan_uuid') })
+}
+
+function handleOpenTrade () {
+  socket.on('openTrade', function (cardData) {
+    console.log('openTrade received')
+    console.log(cardData)
+    createTradeWindow(svgContainer, containerWidth, containerHeight, hexagonColors, cardData)
+  })
 }
 
 // Type will be "road building" if it's for the intial road building, null else
