@@ -83,7 +83,7 @@ $(document).ready(function () {
     addOnClickListenerToRoads(socket)
 
     moveRobberToTheFront()
-    updateOpacityTurn(playerTurn)
+    updateOpacityTurn(playerTurn, false)
     restoreCurrentAction(serverData.gameStarted, serverData.inGame)
   })
 
@@ -355,6 +355,7 @@ function createDevCardUi (cardData) {
     playYearOfPlenty,
     doNothing]
 
+  svgContainer.selectAll('.devCardAction').remove()
   svgContainer.selectAll('.devCardAction').data(devCardMethods).enter()
     .append('rect')
     .attr('class', 'devCardAction')
@@ -367,7 +368,7 @@ function createDevCardUi (cardData) {
     .attr('fill', 'white')
     .attr('style', 'outline: thin solid red;')
     .on('click', function (d, i) {
-      if (this.attributes.fill.value === 'white' && currentAction < 0 && playerIndex > -1) {
+      if (this.attributes.fill.value === 'white' && currentAction < 0 && playerIndex > -1 && cardData && cardData.cardData[devCards[i]] > 0) {
         d() // d is a reference to a function
       }
       d3.event.stopPropagation()
@@ -1227,16 +1228,16 @@ function handleDiceRoll (socket) {
 }
 
 function handleWhoseTurn (socket) {
-  socket.on('whoseTurn', function (turn) {
-    updateOpacityTurn(turn)
+  socket.on('whoseTurn', function (turn, gameStarted) {
+    updateOpacityTurn(turn, gameStarted)
   })
 }
 
-function updateOpacityTurn (turn) {
+function updateOpacityTurn (turn, gameStarted) {
   var allActions = svgContainer.selectAll('.action')[0].concat(svgContainer.selectAll('.devCardAction')[0])
   playerTurn = turn
   allActions.forEach(function (boxUi) {
-    if (turn === playerIndex) {
+    if (turn === playerIndex && gameStarted) {
       boxUi.attributes.fill.value = 'white'
     } else {
       boxUi.attributes.fill.value = 'grey'
