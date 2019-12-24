@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-/* global d3_hexbinAngles d3 socket $ */
+/* global d3_hexbinAngles d3 socket createTradeWindow $ */
 
 var scale = 1
 var containerWidth = 900 * scale
@@ -664,47 +664,7 @@ function createActionsUi () {
 }
 
 function openTradeWindow () {
-  svgContainer.selectAll('.tradeWindow').data([0]).enter()
-    .append('rect')
-    .attr('class', 'tradeWindow')
-    .attr('x', containerWidth / 10)
-    .attr('y', containerHeight / 10)
-    .attr('width', containerWidth * 4 / 5)
-    .attr('height', containerHeight * 4 / 5)
-    .attr('fill', 'white')
-    .attr('style', function () {
-      return 'outline: thin solid red;'
-    })
-
-  svgContainer.selectAll('.tradeText').data(svgContainer.selectAll('.tradeWindow')[0])
-    .enter().append('text')
-    .attr('class', 'tradeText')
-    .attr('x', function (d, i) { return parseInt(d.attributes.x.value) + parseInt(d.attributes.width.value) * 0.4 })
-    .attr('y', function (d, i) { return parseInt(d.attributes.y.value) + parseInt(d.attributes.height.value) / 10 })
-    .text(function () {
-      return 'Trade Window'
-    })
-    .attr('font-size', '20px')
-    .attr('fill', 'black')
-    .style('pointer-events', 'none')
-
-  svgContainer.selectAll('.exitTrade').data(svgContainer.selectAll('.tradeWindow')[0])
-    .enter().append('rect')
-    .attr('class', 'exitTrade')
-    .attr('x', function (d, i) { return parseInt(d.attributes.x.value) + parseInt(d.attributes.width.value) * 0.05 })
-    .attr('y', function (d, i) { return parseInt(d.attributes.y.value) + parseInt(d.attributes.height.value) / 20 })
-    .attr('width', function (d, i) { return parseInt(d.attributes.width.value) * 0.05 })
-    .attr('height', function (d, i) { return parseInt(d.attributes.width.value) * 0.05 })
-    .attr('fill', 'red')
-    .attr('style', function () {
-      return 'outline: thin solid red;'
-    })
-    .on('click', function (d, i) {
-      d3.event.stopPropagation()
-      svgContainer.selectAll('.tradeWindow').remove()
-      svgContainer.selectAll('.tradeText').remove()
-      svgContainer.selectAll('.exitTrade').remove()
-    })
+  createTradeWindow(svgContainer, containerWidth, containerHeight, hexagonColors, null)
 }
 
 // Type will be "road building" if it's for the intial road building, null else
