@@ -107,8 +107,8 @@ function createTradeBoxes (svgContainer, hexagonColors, tradeActionString, yPosi
       return tradeActionString + resources[i]
     })
     .text(function (d, i) {
-      if (tradeActionString === current) {
-        return cardData == null ? 0 : cardData.cardData[resources[i]]
+      if (tradeActionString === current && cardData != null) {
+        return cardData.cardData[resources[i]]
       } else {
         return 0
       }
