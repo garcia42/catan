@@ -685,7 +685,7 @@ function handleMainTurnPhase (io, currentRoom) {
 
 function robberEvent (io, currentRoom) {
   // Disable all buttons for everyone on start except resource buttons for those with > 7, on end enable buttons for person whose turn it is?
-  io.sockets.in(currentRoom).emit('whoseTurn', -1)
+  io.sockets.in(currentRoom).emit('whoseTurn', -1, false)
   io.sockets.in(currentRoom).emit('7deadlySins', roomData[currentRoom].map(p => p.getCards()))
 }
 
@@ -701,7 +701,7 @@ exports.resumeGameFromRobberEvent = function (io, currentRoom, robbedData) {
     console.log('enough players have finished being robbered to resume game')
     resumeGameData[currentRoom] = []
     io.sockets.in(currentRoom).emit('cards', roomData[currentRoom].map(p => p.getCards())) // The knight then moves here in the UI
-    io.sockets.in(currentRoom).emit('whoseTurn', playerTurn[currentRoom])
+    io.sockets.in(currentRoom).emit('whoseTurn', playerTurn[currentRoom], true)
     io.sockets.in(currentRoom).emit('stealAsRobber', playerTurn[currentRoom])
   }
 }
@@ -892,7 +892,7 @@ function beginTurn (io, socket, currentRoom, turnInfo) {
     playerTurn[currentRoom] = (playerTurn[currentRoom] + 1) % roomData[currentRoom].length
   }
 
-  io.sockets.in(currentRoom).emit('whoseTurn', playerTurn[currentRoom])
+  io.sockets.in(currentRoom).emit('whoseTurn', playerTurn[currentRoom], currentTurnCountData[currentRoom] >= 2)
   var player = getPlayer(currentRoom, playerTurn[currentRoom])
 
   console.log('begin turn currentTurnCountData[currentRoom]', currentTurnCountData[currentRoom], 'playerTurn', playerTurn[currentRoom])
