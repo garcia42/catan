@@ -4,7 +4,7 @@
   "description": "Catan App",
   "dependencies": {
     "d3": "^4.10.2",
-    "jquery": "~3.4.0",
+    "jquery": "~3.5.0",
     "mime": "~1.4.1",
     "socket.io": "~2.0.3"
   },
