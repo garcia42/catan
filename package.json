@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Catan App",
   "dependencies": {
-    "d3": "^4.10.2",
+    "d3": "^7.6.1",
     "jquery": "~3.4.0",
     "mime": "~1.4.1",
     "socket.io": "~2.0.3"
